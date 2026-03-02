@@ -1,0 +1,1 @@
+*** Check component ของ project ก่อนทำ ***
