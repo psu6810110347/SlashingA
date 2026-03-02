@@ -79,8 +79,8 @@ class HackAndSlashApp(App):
         """Switch to game screen"""
         self.game_manager.start_new_game()
         self.screen_manager.current = 'game'
-        # Update game display
-        Clock.schedule_once(self.update_game_display, 0.1)
+        # Update game display frequently
+        Clock.schedule_interval(self.update_game_display, 0.1)
     
     def update_game_display(self, dt):
         """Update game display"""
@@ -93,6 +93,9 @@ class HackAndSlashApp(App):
             level = state['player_stats']['level']
             game_screen.hp_label.text = f'HP: {hp}/{max_hp}'
             game_screen.level_label.text = f'Level: {level}'
+        
+        if state['time_state']:
+            game_screen.time_label.text = f"Time: {state['time_state']['formatted_time']}"
         
         if state['enemy_stats']:
             game_screen.game_canvas.clear_widgets()

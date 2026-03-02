@@ -78,12 +78,17 @@ class CallbackManager:
         print("Pausing game...")
         self.game_state['is_paused'] = not self.game_state['is_paused']
         if self.app:
+            if self.game_state['is_paused']:
+                if self.app.game_manager:
+                    self.app.game_manager.time_manager.pause()
             self.app.toggle_pause_menu()
     
     def on_resume(self, instance):
         """Callback for resume game"""
         print("Resuming game...")
         self.game_state['is_paused'] = False
+        if self.app and self.app.game_manager:
+            self.app.game_manager.time_manager.resume()
     
     def on_settings(self, instance):
         """Callback for settings button"""

@@ -5,6 +5,7 @@ Contains core game mechanics and management
 
 from game.player import Player
 from game.enemy import Goblin, Orc, Skeleton, Boss
+from game.time_manager import TimeManager
 import random
 
 
@@ -18,12 +19,14 @@ class GameManager:
         self.level = 1
         self.combat_log = []
         self.is_combat_active = False
+        self.time_manager = TimeManager()
     
     def start_new_game(self):
         """Start new game"""
         self.player = Player()
         self.level = 1
         self.combat_log = []
+        self.time_manager.start_game_timer()
         self.spawn_enemy()
         print("New game started!")
     
@@ -112,10 +115,12 @@ class GameManager:
     
     def get_game_state(self):
         """Get current game state"""
+        self.time_manager.update()
         return {
             'player_stats': self.player.get_stats(),
             'enemy_stats': self.current_enemy.get_stats() if self.current_enemy else None,
             'level': self.level,
             'is_combat_active': self.is_combat_active,
-            'combat_log': self.combat_log
+            'combat_log': self.combat_log,
+            'time_state': self.time_manager.get_game_state()
         }
