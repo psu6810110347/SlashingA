@@ -12,6 +12,7 @@ from kivy.graphics import Color, Rectangle
 from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup
 from events.callbacks import CallbackManager
 from game.game_logic import GameManager
+from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup, GameOverScreen
 
 # Set window size
 Window.size = (1280, 720)
@@ -50,7 +51,12 @@ class HackAndSlashApp(App):
         )
         game_screen.name = 'game'
         self.screen_manager.add_widget(game_screen)
-        
+                # Create game over screen
+        game_over_screen = GameOverScreen(
+            callback_manager=self.callback_manager
+        )
+        game_over_screen.name = 'game_over'
+        self.screen_manager.add_widget(game_over_screen)
         # Set default screen
         self.screen_manager.current = 'menu'
         
