@@ -171,8 +171,12 @@ class HackAndSlashApp(App):
                     px, py = perk['pos']
                     if perk['type'] == 'max_hp':
                         Color(0.2, 1.0, 0.2, 1)  # Green Orb for HP
-                    else:
+                    elif perk['type'] == 'speed':
                         Color(0.2, 0.2, 1.0, 1)  # Blue Orb for Speed
+                    elif perk['type'] == 'attack':
+                        Color(1.0, 0.2, 0.2, 1)  # Red Orb for Attack
+                    elif perk['type'] == 'defense':
+                        Color(0.2, 1.0, 1.0, 1)  # Cyan Orb for Defense
                     Rectangle(pos=(px, py), size=(perk['size'][0], perk['size'][1]))
                     
                     # Collision check
@@ -186,7 +190,12 @@ class HackAndSlashApp(App):
                         elif perk['type'] == 'speed':
                             self.game_manager.player.speed += 1
                             self.game_manager.add_log("Collected +1 Speed Perk!")
-                            
+                        elif perk['type'] == 'attack':
+                            self.game_manager.player.attack += 1
+                            self.game_manager.add_log("Collected +1 Attack Perk!")
+                        elif perk['type'] == 'defense':
+                            self.game_manager.player.defense += 1
+                            self.game_manager.add_log("Collected +1 Defense Perk!")
                         # Remove it immediately so it doesn't re-trigger
                         self.game_manager.active_perks.remove(perk)
                     
