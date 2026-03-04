@@ -18,7 +18,7 @@ class Player:
         self.mp = 50
         self.max_mp = 50
         self.attack = 10
-        self.defense = 5
+        self.defense = 0
         self.speed = 5
         self.gold = 0
         self.inventory = []
@@ -29,6 +29,9 @@ class Player:
     def take_damage(self, damage):
         """Take damage"""
         actual_damage = max(1, damage - self.defense)
+        if damage - actual_damage > 0:
+            print(f"Defense blocked {damage - actual_damage} damage!")
+            
         self.hp -= actual_damage
         if self.hp <= 0:
             self.hp = 0

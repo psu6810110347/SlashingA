@@ -59,19 +59,15 @@ class CallbackManager:
         """Callback for attack action"""
         print("Player attacking...")
         if not self.game_state['is_paused']:
-            self.game_state['enemy_hp'] -= 10
-            if self.game_state['enemy_hp'] < 0:
-                self.game_state['enemy_hp'] = 0
-            print(f"Enemy HP: {self.game_state['enemy_hp']}")
+            if self.app and hasattr(self.app, 'game_manager') and self.app.game_manager:
+                self.app.game_manager.player_attack()
     
     def on_use_skill(self, instance):
         """Callback for using skill"""
         print("Using skill...")
         if not self.game_state['is_paused']:
-            self.game_state['enemy_hp'] -= 25
-            if self.game_state['enemy_hp'] < 0:
-                self.game_state['enemy_hp'] = 0
-            print(f"Enemy HP after skill: {self.game_state['enemy_hp']}")
+            if self.app and hasattr(self.app, 'game_manager') and self.app.game_manager:
+                self.app.game_manager.player_skill()
     
     def on_pause(self, instance):
         """Callback for pause button"""

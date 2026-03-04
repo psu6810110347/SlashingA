@@ -52,7 +52,7 @@ class GameManager:
         x = random.randint(100, 1000)
         y = random.randint(100, 600)
         
-        perk_type = random.choice(['max_hp', 'speed'])
+        perk_type = random.choice(['max_hp', 'speed', 'defense'])
         
         if perk_type == 'max_hp':
             perk = {
@@ -62,7 +62,7 @@ class GameManager:
                 'size': [25, 25]
             }
             self.add_log("A Max HP Perk has appeared!")
-        else:
+        elif perk_type == 'speed':
             perk = {
                 'type': 'speed',
                 'label': '+1 Speed',
@@ -70,6 +70,14 @@ class GameManager:
                 'size': [25, 25]
             }
             self.add_log("A Speed Perk has appeared!")
+        else:
+            perk = {
+                'type': 'defense',
+                'label': '+1 Defense',
+                'pos': [x, y],
+                'size': [25, 25]
+            }
+            self.add_log("A Defense Perk has appeared!")
             
         self.active_perks.append(perk)
     
