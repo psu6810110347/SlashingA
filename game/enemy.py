@@ -68,6 +68,7 @@ class NormalEnemy(Enemy):
         self.speed = 4
 
 
+
 class TankEnemy(Enemy):
     """Tank enemy type"""
     def __init__(self, scaling_factor=0):
@@ -86,6 +87,7 @@ class ShooterEnemy(Enemy):
         self.max_hp = self.hp
         self.attack = 10 + (scaling_factor * 5)
         self.speed = 4
+        self.last_shot_time = 0
 
 """
 Enemy Module
