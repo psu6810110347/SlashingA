@@ -1,14 +1,38 @@
-*** Check component ของ project ก่อนทำ ***
+# SlashingA - Game Design Document
 
-## Roadmap: Core Gameplay Loop
-- [ ] Implement smooth W, A, S, D movement parsing (key down/up tracking)
-- [ ] Implement left-click detection for attack
-- [ ] Add basic 2D representation of the player and enemies on the game canvas
-- [ ] Update Player class (100 Max HP, 5 DMG, 5 Speed, Health Regen)
-- [ ] Implement Enemy base AI (move towards player)
-- [ ] Implement 3 Enemy Types (Normal, Tank, Shooter) with specific stats
-- [ ] Implement Enemy scaling logic (+10 HP, +5 DMG every 5 minutes)
-- [ ] Implement Perks spawning (every 1 minute) and selection UI
-- [ ] Implement Perk effects (Attack Boost +1, Health Boost +10, Speed Boost +1)
-- [ ] Update Game Loop for rendering and collisions
-- [ ] Test movement, combat, enemy scaling, and perk collection
+## Player Stats
+- **Max HP**: 100
+- **Attack Damage**: 5
+- **Movement Speed**: 5
+- **Health Regen**: Regenerates normally over time
+
+## Enemy Types & Scaling
+*All enemies must constantly walk toward the player.*
+
+### Normal
+- **Base HP**: 10 (+10 every 5 minutes)
+- **Base Speed**: 4
+- **Base Damage**: 10 (+5 every 5 minutes)
+
+### Tank
+- **Base HP**: 20 (+10 every 5 minutes)
+- **Base Speed**: 3
+- **Base Damage**: 10 (+5 every 5 minutes)
+
+### Shooter
+- **Base HP**: 10 (+10 every 5 minutes)
+- **Base Speed**: 4
+- **Base Damage**: 10 (+5 every 5 minutes)
+- **Special**: Can shoot projectiles at the player
+
+## Perks (Power-ups)
+*Perks spawn randomly every 1 minute. The player can choose which to collect.*
+
+### Attack Boost
+- Increases Player Damage by 1
+
+### Health Boost
+- Increases Player Max Health by 10
+
+### Speed Boost
+- Increases Player Movement Speed by 1

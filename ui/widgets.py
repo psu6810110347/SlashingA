@@ -12,8 +12,8 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import Screen
-from kivy.uix.widget import Widget
 from kivy.core.window import Window
+from kivy.clock import Clock
 
 
 class MainMenuScreen(Screen):
@@ -89,43 +89,72 @@ class GameScreen(Screen):
             padding=5
         )
         
-        # Player stats labels
-        self.hp_label = Label(
-            text='HP: 100/100',
-            font_size='14sp',
-            size_hint_x=0.25
-        )
-        
+        # Player stats labels (Removed HP from top)
         self.level_label = Label(
             text='Level: 1',
-            font_size='14sp',
-            size_hint_x=0.25
+            font_size='18sp',
+            size_hint_x=0.33
         )
         
         score_label = Label(
             text='Score: 0',
-            font_size='14sp',
-            size_hint_x=0.25
+            font_size='18sp',
+            size_hint_x=0.33
         )
-        
+
         self.time_label = Label(
             text='Time: 00:00',
-            font_size='14sp',
-            size_hint_x=0.25
+            font_size='18sp',
+            size_hint_x=0.33
         )
         
-        hud.add_widget(self.hp_label)
         hud.add_widget(self.level_label)
         hud.add_widget(score_label)
         hud.add_widget(self.time_label)
         
         main_layout.add_widget(hud)
         
-        # Game canvas area
-        self.game_canvas = Widget(
-            size_hint_y=0.7
+        # Lower Content Area (Left Stats + Right Game/Controls)
+        content_area = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=0.9
         )
-        main_layout.add_widget(self.game_canvas)
+        
+        # Left Side: Stat Panel
+        self.stat_panel = BoxLayout(
+            orientation='vertical',
+            size_hint_x=0.15,
+            padding=10,
+            spacing=2
+        )
+        
+        stat_title = Label(text='[b]PLAYER STATS[/b]', markup=True, font_size='16sp', size_hint_y=None, height=40)
+        self.side_hp_label = Label(text='HP: 100/100', font_size='14sp', size_hint_y=None, height=20)
+        self.side_atk_label = Label(text='Attack: 10', font_size='14sp', size_hint_y=None, height=20)
+        self.side_def_label = Label(text='Defense: 0', font_size='14sp', size_hint_y=None, height=20)
+        self.side_spd_label = Label(text='Speed: 5', font_size='14sp', size_hint_y=None, height=20)
+        
+        self.stat_panel.add_widget(stat_title)
+        self.stat_panel.add_widget(self.side_hp_label)
+        self.stat_panel.add_widget(self.side_atk_label)
+        self.stat_panel.add_widget(self.side_def_label)
+        self.stat_panel.add_widget(self.side_spd_label)
+        
+        # Push stats to the top of the left column
+        self.stat_panel.add_widget(Label(size_hint_y=1))
+        
+        # Right Side: Game Canvas and Controls
+        right_area = BoxLayout(
+            orientation='vertical',
+            size_hint_x=0.85
+        )
+        
+        # Game canvas area
+        self.game_canvas = BoxLayout(
+            orientation='vertical',
+            size_hint_y=0.8
+        )
+        right_area.add_widget(self.game_canvas)
         
         # Control buttons
         controls = GridLayout(
@@ -135,35 +164,11 @@ class GameScreen(Screen):
             padding=5
         )
         
-        attack_btn = Button(
-            text='ATTACK\n(Space)',
-            font_size='12sp'
-        )
-        attack_btn.bind(on_press=self.callback_manager.on_attack)
-        controls.add_widget(attack_btn)
+        # Add Left and Right areas to content layout
+        content_area.add_widget(self.stat_panel)
+        content_area.add_widget(right_area)
         
-        skill_btn = Button(
-            text='SKILL\n(Q)',
-            font_size='12sp'
-        )
-        skill_btn.bind(on_press=self.callback_manager.on_use_skill)
-        controls.add_widget(skill_btn)
-        
-        pause_btn = Button(
-            text='PAUSE\n(P)',
-            font_size='12sp'
-        )
-        pause_btn.bind(on_press=self.callback_manager.on_pause)
-        controls.add_widget(pause_btn)
-        
-        menu_btn = Button(
-            text='MENU\n(ESC)',
-            font_size='12sp'
-        )
-        menu_btn.bind(on_press=self.callback_manager.on_return_to_menu)
-        controls.add_widget(menu_btn)
-        
-        main_layout.add_widget(controls)
+        main_layout.add_widget(content_area)
         self.add_widget(main_layout)
 
 

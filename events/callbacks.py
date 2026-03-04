@@ -59,36 +59,27 @@ class CallbackManager:
         """Callback for attack action"""
         print("Player attacking...")
         if not self.game_state['is_paused']:
-            self.game_state['enemy_hp'] -= 10
-            if self.game_state['enemy_hp'] < 0:
-                self.game_state['enemy_hp'] = 0
-            print(f"Enemy HP: {self.game_state['enemy_hp']}")
+            if self.app and hasattr(self.app, 'game_manager') and self.app.game_manager:
+                self.app.game_manager.player_attack()
     
     def on_use_skill(self, instance):
         """Callback for using skill"""
         print("Using skill...")
         if not self.game_state['is_paused']:
-            self.game_state['enemy_hp'] -= 25
-            if self.game_state['enemy_hp'] < 0:
-                self.game_state['enemy_hp'] = 0
-            print(f"Enemy HP after skill: {self.game_state['enemy_hp']}")
+            if self.app and hasattr(self.app, 'game_manager') and self.app.game_manager:
+                self.app.game_manager.player_skill()
     
     def on_pause(self, instance):
         """Callback for pause button"""
         print("Pausing game...")
         self.game_state['is_paused'] = not self.game_state['is_paused']
         if self.app:
-            if self.game_state['is_paused']:
-                if self.app.game_manager:
-                    self.app.game_manager.time_manager.pause()
             self.app.toggle_pause_menu()
     
     def on_resume(self, instance):
         """Callback for resume game"""
         print("Resuming game...")
         self.game_state['is_paused'] = False
-        if self.app and self.app.game_manager:
-            self.app.game_manager.time_manager.resume()
     
     def on_settings(self, instance):
         """Callback for settings button"""
@@ -111,6 +102,25 @@ class CallbackManager:
         """Get current game state"""
         return self.game_state
     
+    def on_perk_selected(self, perk_id):
+        """Callback for selecting a perk from the popup"""
+        if self.app and self.app.game_manager:
+            player = self.app.game_manager.player
+            
+            if perk_id == 'max_hp':
+                player.max_hp += 10
+                player.hp += 10
+                self.app.game_manager.add_log("Gained +10 Max HP!")
+            elif perk_id == 'attack':
+                player.attack += 1
+                self.app.game_manager.add_log("Gained +1 Attack Damage!")
+            elif perk_id == 'speed':
+                player.speed += 1
+                self.app.game_manager.add_log("Gained +1 Movement Speed!")
+                
+        # Unpause the game
+        self.game_state['is_paused'] = False
+
     def update_player_hp(self, amount):
         """Update player HP"""
         self.game_state['player_hp'] += amount
