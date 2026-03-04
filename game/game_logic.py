@@ -183,6 +183,10 @@ class GameManager:
         
         self.is_combat_active = False
         self.level += 1
+        
+        # Spawn a new enemy!
+        self.spawn_enemy()
+
     
     def player_defeated(self):
         """Handle player defeat"""
