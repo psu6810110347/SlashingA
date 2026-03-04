@@ -19,7 +19,7 @@ class Player:
         self.max_mp = 50
         self.attack = 10
         self.defense = 5
-        self.agility = 5
+        self.speed = 5
         self.gold = 0
         self.inventory = []
         self.skills = []
@@ -93,6 +93,6 @@ class Player:
             'max_mp': self.max_mp,
             'attack': self.attack,
             'defense': self.defense,
-            'agility': self.agility,
+            'speed': self.speed,
             'gold': self.gold,
         }

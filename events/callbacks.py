@@ -106,6 +106,25 @@ class CallbackManager:
         """Get current game state"""
         return self.game_state
     
+    def on_perk_selected(self, perk_id):
+        """Callback for selecting a perk from the popup"""
+        if self.app and self.app.game_manager:
+            player = self.app.game_manager.player
+            
+            if perk_id == 'max_hp':
+                player.max_hp += 10
+                player.hp += 10
+                self.app.game_manager.add_log("Gained +10 Max HP!")
+            elif perk_id == 'attack':
+                player.attack += 1
+                self.app.game_manager.add_log("Gained +1 Attack Damage!")
+            elif perk_id == 'speed':
+                player.speed += 1
+                self.app.game_manager.add_log("Gained +1 Movement Speed!")
+                
+        # Unpause the game
+        self.game_state['is_paused'] = False
+
     def update_player_hp(self, amount):
         """Update player HP"""
         self.game_state['player_hp'] += amount
