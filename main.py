@@ -125,11 +125,12 @@ class HackAndSlashApp(App):
         state = self.game_manager.get_game_state()
         
         if state['player_stats']:
-            hp = state['player_stats']['hp']
-            max_hp = state['player_stats']['max_hp']
-            level = state['player_stats']['level']
-            game_screen.hp_label.text = f'HP: {hp}/{max_hp}'
-            game_screen.level_label.text = f'Level: {level}'
+            stats = state['player_stats']
+            game_screen.level_label.text = f"Level: {stats['level']}"
+            game_screen.side_hp_label.text = f"HP: {stats['hp']}/{stats['max_hp']}"
+            game_screen.side_atk_label.text = f"Attack: {stats['attack']}"
+            game_screen.side_def_label.text = f"Defense: {stats['defense']}"
+            game_screen.side_spd_label.text = f"Speed: {stats['speed']}"
         
         if 'time_state' in state and state['time_state']:
             game_screen.time_label.text = f"Time: {state['time_state']['formatted_time']}"
