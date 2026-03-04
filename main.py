@@ -183,6 +183,22 @@ class HackAndSlashApp(App):
         if not self.callback_manager.game_state['is_paused'] and state['is_combat_active']:
             self.game_manager.enemy_attack()
             
+            # Enemy Movement
+            e = self.game_manager.current_enemy
+            if e and e.is_alive:
+                ex, ey = e.position
+                px, py = self.game_manager.player.position
+                dx, dy = px - ex, py - ey
+                dist = (dx**2 + dy**2)**0.5
+                
+                # Stop moving if close enough to player
+                if dist > 40:
+                    dx /= dist
+                    dy /= dist
+                    move_speed = getattr(e, 'speed', 3) * 20
+                    e.position[0] += dx * move_speed * dt
+                    e.position[1] += dy * move_speed * dt
+            
             # Update Projectiles
             dt_safe = dt if dt < 0.1 else 0.016
             surviving_projectiles = []
@@ -249,6 +265,21 @@ class HackAndSlashApp(App):
                 pos = self.game_manager.player.position
                 Color(0.2, 0.6, 1.0, 1)
                 Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
+                
+            # Draw Enemy
+            if self.game_manager.current_enemy and self.game_manager.current_enemy.is_alive:
+                e_pos = self.game_manager.current_enemy.position
+                e_name = self.game_manager.current_enemy.name
+                if e_name == "Tank":
+                    Color(0.8, 0.4, 0.0, 1) # Orange
+                    Rectangle(pos=(e_pos[0], e_pos[1]), size=(30, 30))
+                elif e_name == "Shooter":
+                    Color(0.8, 0.0, 0.8, 1) # Purple
+                    Rectangle(pos=(e_pos[0], e_pos[1]), size=(15, 15))
+                else:
+                    Color(0.8, 0.2, 0.2, 1) # Red (Normal)
+                    Rectangle(pos=(e_pos[0], e_pos[1]), size=(20, 20))
+
             
             # Draw Attacks
             current_time = Clock.get_time()

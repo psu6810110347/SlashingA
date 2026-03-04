@@ -45,6 +45,11 @@ class GameManager:
         scaling_factor = int(self.time_manager.elapsed_time // 300)
         self.current_enemy = enemy_class(scaling_factor)
         
+        # Give enemy a random spawn position safely within 1200x600 boundaries
+        spawn_x = random.randint(100, 1100)
+        spawn_y = random.randint(100, 500)
+        self.current_enemy.position = [spawn_x, spawn_y]
+        
         self.is_combat_active = True
         self.add_log(f"A wild {self.current_enemy.name} appeared!")
         
@@ -160,16 +165,28 @@ class GameManager:
                 self.add_log(f"{self.current_enemy.name} fired a projectile!")
             return 0
             
-        damage = self.current_enemy.attack_player()
-        actual_damage = self.player.take_damage(damage)
-        
-        message = f"{self.current_enemy.name} dealt {actual_damage} damage to you!"
-        self.add_log(message)
-        
-        if not self.player.is_alive:
-            self.player_defeated()
-        
-        return actual_damage
+        # Normal melee attack
+        current_time = self.time_manager.elapsed_time
+        if current_time - getattr(self.current_enemy, 'last_shot_time', 0) >= 1.5:
+            ex, ey = self.current_enemy.position
+            px, py = self.player.position
+            dist = ((px - ex)**2 + (py - ey)**2)**0.5
+            
+            # Melee range is around 50 pixels
+            if dist < 50:
+                self.current_enemy.last_shot_time = current_time
+                damage = self.current_enemy.attack_player()
+                actual_damage = self.player.take_damage(damage)
+                
+                message = f"{self.current_enemy.name} dealt {actual_damage} damage to you!"
+                self.add_log(message)
+                
+                if not self.player.is_alive:
+                    self.player_defeated()
+                
+                return actual_damage
+        return 0
+
 
     
     def defeat_enemy(self):
