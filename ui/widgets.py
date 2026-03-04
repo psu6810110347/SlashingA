@@ -92,31 +92,24 @@ class GameScreen(Screen):
         self.hp_label = Label(
             text='HP: 100/100',
             font_size='14sp',
-            size_hint_x=0.25
+            size_hint_x=0.3
         )
         
         self.level_label = Label(
             text='Level: 1',
             font_size='14sp',
-            size_hint_x=0.25
+            size_hint_x=0.3
         )
         
         score_label = Label(
             text='Score: 0',
             font_size='14sp',
-            size_hint_x=0.25
-        )
-
-        self.time_label = Label(
-            text='Time: 00:00',
-            font_size='14sp',
-            size_hint_x=0.25
+            size_hint_x=0.3
         )
         
         hud.add_widget(self.hp_label)
         hud.add_widget(self.level_label)
         hud.add_widget(score_label)
-        hud.add_widget(self.time_label)
         
         main_layout.add_widget(hud)
         
