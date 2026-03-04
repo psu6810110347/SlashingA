@@ -12,6 +12,7 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.screenmanager import Screen
+from kivy.uix.widget import Widget
 from kivy.core.window import Window
 
 
@@ -121,8 +122,7 @@ class GameScreen(Screen):
         main_layout.add_widget(hud)
         
         # Game canvas area
-        self.game_canvas = BoxLayout(
-            orientation='vertical',
+        self.game_canvas = Widget(
             size_hint_y=0.7
         )
         main_layout.add_widget(self.game_canvas)
