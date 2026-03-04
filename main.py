@@ -184,6 +184,7 @@ class HackAndSlashApp(App):
                     player_x, player_y = self.game_manager.player.position
                     dist = ((player_x - px)**2 + (player_y - py)**2)**0.5
                     if dist < 25:
+                        self.game_manager.player.level += 1
                         if perk['type'] == 'max_hp':
                             self.game_manager.player.max_hp += 10
                             self.game_manager.player.hp += 10
