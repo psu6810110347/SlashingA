@@ -37,6 +37,16 @@ class MainMenuScreen(Screen):
         )
         main_layout.add_widget(title)
         
+        # Controls Information
+        controls_label = Label(
+            text='[b]How to Play:[/b]\nW, A, S, D - Move\nLeft Mouse Click - Attack\nP - Pause Game\nESC - Main Menu',
+            font_size='18sp',
+            markup=True,
+            halign='center',
+            size_hint_y=0.2
+        )
+        main_layout.add_widget(controls_label)
+        
         # Buttons container
         button_container = BoxLayout(
             orientation='vertical',
