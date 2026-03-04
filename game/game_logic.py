@@ -22,6 +22,7 @@ class GameManager:
         self.time_manager = TimeManager()
         self.active_perks = []
         self.last_perk_spawn_time = 0
+        self.active_projectiles = []
     
     def start_new_game(self):
         """Start new game"""
@@ -29,6 +30,7 @@ class GameManager:
         self.level = 1
         self.combat_log = []
         self.active_perks = []
+        self.active_projectiles = []
         self.last_perk_spawn_time = 0
         self.time_manager.start_game_timer()
         self.spawn_enemy()
@@ -130,6 +132,34 @@ class GameManager:
         if not self.current_enemy or not self.is_combat_active:
             return None
         
+        # If it's a Shooter, spawn a projectile instead of direct hit
+        if isinstance(self.current_enemy, ShooterEnemy):
+            # Check cooldown (every 2 seconds)
+            current_time = self.time_manager.elapsed_time
+            if current_time - getattr(self.current_enemy, 'last_shot_time', 0) >= 2.0:
+                self.current_enemy.last_shot_time = current_time
+                
+                ex, ey = self.current_enemy.position
+                px, py = self.player.position
+                
+                # Calculate direction vector
+                dx, dy = px - ex, py - ey
+                dist = (dx**2 + dy**2)**0.5
+                if dist > 0:
+                    dx /= dist
+                    dy /= dist
+                
+                # Projectile payload
+                projectile = {
+                    'pos': [ex, ey],
+                    'dir': [dx, dy],
+                    'speed': 150,  # pixels per second
+                    'damage': self.current_enemy.attack
+                }
+                self.active_projectiles.append(projectile)
+                self.add_log(f"{self.current_enemy.name} fired a projectile!")
+            return 0
+            
         damage = self.current_enemy.attack_player()
         actual_damage = self.player.take_damage(damage)
         
@@ -140,6 +170,7 @@ class GameManager:
             self.player_defeated()
         
         return actual_damage
+
     
     def defeat_enemy(self):
         """Handle enemy defeat"""
@@ -181,5 +212,6 @@ class GameManager:
             'is_combat_active': self.is_combat_active,
             'combat_log': self.combat_log,
             'time_state': self.time_manager.get_game_state(),
-            'active_perks': self.active_perks
+            'active_perks': self.active_perks,
+            'active_projectiles': self.active_projectiles
         }
