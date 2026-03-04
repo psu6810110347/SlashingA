@@ -347,3 +347,73 @@ class SkillTree(BoxLayout):
             font_size='18sp'
         )
         self.add_widget(close_btn)
+
+class GameOverScreen(Screen):
+    """Game over screen showing final stats"""
+    def __init__(self, callback_manager, **kwargs):
+        super(GameOverScreen, self).__init__(**kwargs)
+        self.callback_manager = callback_manager
+        
+        main_layout = BoxLayout(
+            orientation='vertical',
+            padding=20,
+            spacing=10
+        )
+        
+        # Game Over Title
+        title = Label(
+            text='[color=ff0000][b]GAME OVER[/b][/color]',
+            font_size='48sp',
+            markup=True,
+            size_hint_y=0.2
+        )
+        main_layout.add_widget(title)
+        
+        # Stats container
+        stats_layout = GridLayout(
+            cols=2,
+            spacing=10,
+            size_hint_y=0.4,
+            padding=20
+        )
+        
+        self.final_level_label = Label(text='Level Reached: 1', font_size='20sp')
+        self.final_time_label = Label(text='Time Survived: 00:00', font_size='20sp')
+        self.enemies_killed_label = Label(text='Enemies Defeated: 0', font_size='20sp')
+        self.gold_earned_label = Label(text='Gold Earned: 0', font_size='20sp')
+        
+        stats_layout.add_widget(self.final_level_label)
+        stats_layout.add_widget(self.final_time_label)
+        stats_layout.add_widget(self.enemies_killed_label)
+        stats_layout.add_widget(self.gold_earned_label)
+        
+        main_layout.add_widget(stats_layout)
+        
+        # Buttons container
+        buttons_layout = BoxLayout(
+            orientation='horizontal',
+            spacing=20,
+            size_hint_y=0.2,
+            padding=10
+        )
+        
+        restart_btn = Button(
+            text='TRY AGAIN',
+            font_size='24sp',
+            background_color=(0.2, 0.8, 0.2, 1)
+        )
+        restart_btn.bind(on_press=self.callback_manager.on_restart_game)
+        
+        menu_btn = Button(
+            text='MAIN MENU',
+            font_size='24sp',
+            background_color=(0.3, 0.3, 0.8, 1)
+        )
+        menu_btn.bind(on_press=self.callback_manager.on_return_to_menu)
+        
+        buttons_layout.add_widget(restart_btn)
+        buttons_layout.add_widget(menu_btn)
+        
+        main_layout.add_widget(buttons_layout)
+        self.add_widget(main_layout)
+
