@@ -76,6 +76,15 @@ class GameManager:
         if not self.is_combat_active or not self.current_enemy:
             return None
         
+        # Check distance before allowing attack
+        px, py = self.player.position
+        ex, ey = self.current_enemy.position
+        dist = ((px - ex)**2 + (py - ey)**2)**0.5
+        
+        if dist > 60:
+            # Too far to hit
+            return 0
+            
         damage = self.player.attack + random.randint(-2, 5)
         actual_damage = self.current_enemy.take_damage(damage)
         
