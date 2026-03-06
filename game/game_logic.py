@@ -23,6 +23,7 @@ class GameManager:
         self.time_manager = TimeManager()
         self.active_perks = []
         self.last_perk_spawn_time = 0
+        self.last_regen_time = 0
         self.active_projectiles = []
         self.last_score_interval = 0
     
@@ -34,6 +35,7 @@ class GameManager:
         self.active_perks = []
         self.active_projectiles = []
         self.last_perk_spawn_time = 0
+        self.last_regen_time = 0
         self.last_score_interval = 0
         self.time_manager.start_game_timer()
         self.spawn_enemy()
@@ -219,6 +221,12 @@ class GameManager:
             self.player.score += 100
             self.add_log("Survived 5 minutes! +100 Score!")
             self.last_score_interval = score_intervals
+            
+        # Passive HP Regeneration (1 HP every 3 seconds)
+        if current_time - self.last_regen_time >= 3.0:
+            if self.player.hp > 0 and self.player.hp < self.player.max_hp:
+                self.player.heal(1)
+            self.last_regen_time = current_time
             
         return {
             'player_stats': self.player.get_stats(),
