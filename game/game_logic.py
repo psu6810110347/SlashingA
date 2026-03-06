@@ -22,6 +22,7 @@ class GameManager:
         self.time_manager = TimeManager()
         self.active_perks = []
         self.last_perk_spawn_time = 0
+        self.active_projectiles = []
     
     def start_new_game(self):
         """Start new game"""
@@ -29,6 +30,7 @@ class GameManager:
         self.level = 1
         self.combat_log = []
         self.active_perks = []
+        self.active_projectiles = []
         self.last_perk_spawn_time = 0
         self.time_manager.start_game_timer()
         self.spawn_enemy()
@@ -42,6 +44,11 @@ class GameManager:
         # Scale stats: 1 factor for every 5 minutes (300 seconds)
         scaling_factor = int(self.time_manager.elapsed_time // 300)
         self.current_enemy = enemy_class(scaling_factor)
+        
+        # Give enemy a random spawn position safely within 1200x600 boundaries
+        spawn_x = random.randint(100, 1100)
+        spawn_y = random.randint(100, 500)
+        self.current_enemy.position = [spawn_x, spawn_y]
         
         self.is_combat_active = True
         self.add_log(f"A wild {self.current_enemy.name} appeared!")
@@ -130,16 +137,57 @@ class GameManager:
         if not self.current_enemy or not self.is_combat_active:
             return None
         
-        damage = self.current_enemy.attack_player()
-        actual_damage = self.player.take_damage(damage)
-        
-        message = f"{self.current_enemy.name} dealt {actual_damage} damage to you!"
-        self.add_log(message)
-        
-        if not self.player.is_alive:
-            self.player_defeated()
-        
-        return actual_damage
+        # If it's a Shooter, spawn a projectile instead of direct hit
+        if isinstance(self.current_enemy, ShooterEnemy):
+            # Check cooldown (every 2 seconds)
+            current_time = self.time_manager.elapsed_time
+            if current_time - getattr(self.current_enemy, 'last_shot_time', 0) >= 2.0:
+                self.current_enemy.last_shot_time = current_time
+                
+                ex, ey = self.current_enemy.position
+                px, py = self.player.position
+                
+                # Calculate direction vector
+                dx, dy = px - ex, py - ey
+                dist = (dx**2 + dy**2)**0.5
+                if dist > 0:
+                    dx /= dist
+                    dy /= dist
+                
+                # Projectile payload
+                projectile = {
+                    'pos': [ex, ey],
+                    'dir': [dx, dy],
+                    'speed': 150,  # pixels per second
+                    'damage': self.current_enemy.attack
+                }
+                self.active_projectiles.append(projectile)
+                self.add_log(f"{self.current_enemy.name} fired a projectile!")
+            return 0
+            
+        # Normal melee attack
+        current_time = self.time_manager.elapsed_time
+        if current_time - getattr(self.current_enemy, 'last_shot_time', 0) >= 1.5:
+            ex, ey = self.current_enemy.position
+            px, py = self.player.position
+            dist = ((px - ex)**2 + (py - ey)**2)**0.5
+            
+            # Melee range is around 50 pixels
+            if dist < 50:
+                self.current_enemy.last_shot_time = current_time
+                damage = self.current_enemy.attack_player()
+                actual_damage = self.player.take_damage(damage)
+                
+                message = f"{self.current_enemy.name} dealt {actual_damage} damage to you!"
+                self.add_log(message)
+                
+                if not self.player.is_alive:
+                    self.player_defeated()
+                
+                return actual_damage
+        return 0
+
+
     
     def defeat_enemy(self):
         """Handle enemy defeat"""
@@ -152,6 +200,10 @@ class GameManager:
         
         self.is_combat_active = False
         self.level += 1
+        
+        # Spawn a new enemy!
+        self.spawn_enemy()
+
     
     def player_defeated(self):
         """Handle player defeat"""
@@ -181,5 +233,6 @@ class GameManager:
             'is_combat_active': self.is_combat_active,
             'combat_log': self.combat_log,
             'time_state': self.time_manager.get_game_state(),
-            'active_perks': self.active_perks
+            'active_perks': self.active_perks,
+            'active_projectiles': self.active_projectiles
         }

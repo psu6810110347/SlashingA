@@ -12,6 +12,7 @@ from kivy.graphics import Color, Rectangle
 from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup
 from events.callbacks import CallbackManager
 from game.game_logic import GameManager
+from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup, GameOverScreen
 
 # Set window size
 Window.size = (1280, 720)
@@ -50,7 +51,12 @@ class HackAndSlashApp(App):
         )
         game_screen.name = 'game'
         self.screen_manager.add_widget(game_screen)
-        
+                # Create game over screen
+        game_over_screen = GameOverScreen(
+            callback_manager=self.callback_manager
+        )
+        game_over_screen.name = 'game_over'
+        self.screen_manager.add_widget(game_over_screen)
         # Set default screen
         self.screen_manager.current = 'menu'
         
@@ -123,7 +129,17 @@ class HackAndSlashApp(App):
         """Update game display"""
         game_screen = self.screen_manager.get_screen('game')
         state = self.game_manager.get_game_state()
-        
+                # Check if player died
+        if state['player_stats'] and state['player_stats']['hp'] <= 0:
+            game_over_screen = self.screen_manager.get_screen('game_over')
+            game_over_screen.final_level_label.text = f"Level Reached: {state['level']}"
+            if 'time_state' in state and state['time_state']:
+                game_over_screen.final_time_label.text = f"Time Survived: {state['time_state']['formatted_time']}"
+            
+            self.screen_manager.current = 'game_over'
+            Clock.unschedule(self.update_game_display) # Stop game loop
+            return
+
         if state['player_stats']:
             stats = state['player_stats']
             game_screen.level_label.text = f"Level: {stats['level']}"
@@ -160,8 +176,52 @@ class HackAndSlashApp(App):
             player.position = [new_x, new_y]
             if hasattr(player, 'update'):
                 player.update(dt)
+                # Update game state explicitly (since we need elapsed time for projectiles/spawns)
+        self.game_manager.time_manager.update()
         
+        # Enemy Attack Tick
+        if not self.callback_manager.game_state['is_paused'] and state['is_combat_active']:
+            self.game_manager.enemy_attack()
+            
+            # Enemy Movement
+            e = self.game_manager.current_enemy
+            if e and e.is_alive:
+                ex, ey = e.position
+                px, py = self.game_manager.player.position
+                dx, dy = px - ex, py - ey
+                dist = (dx**2 + dy**2)**0.5
+                
+                # Stop moving if close enough to player
+                if dist > 40:
+                    dx /= dist
+                    dy /= dist
+                    move_speed = getattr(e, 'speed', 3) * 20
+                    e.position[0] += dx * move_speed * dt
+                    e.position[1] += dy * move_speed * dt
+            
+            # Update Projectiles
+            dt_safe = dt if dt < 0.1 else 0.016
+            surviving_projectiles = []
+            for p in self.game_manager.active_projectiles:
+                p['pos'][0] += p['dir'][0] * p['speed'] * dt_safe
+                p['pos'][1] += p['dir'][1] * p['speed'] * dt_safe
+                
+                # Check collision with player
+                px, py = self.game_manager.player.position
+                dist = ((p['pos'][0] - px)**2 + (p['pos'][1] - py)**2)**0.5
+                
+                if dist < 20: # Hit player
+                    actual_damage = self.game_manager.player.take_damage(p['damage'])
+                    self.game_manager.add_log(f"Projectile hit you for {actual_damage} damage!")
+                    if not self.game_manager.player.is_alive:
+                        self.game_manager.player_defeated()
+                elif 0 <= p['pos'][0] <= Window.width and 0 <= p['pos'][1] <= Window.height:
+                    surviving_projectiles.append(p)
+                    
+            self.game_manager.active_projectiles = surviving_projectiles
+
         # Draw game entities
+
         game_screen.game_canvas.canvas.clear()
         with game_screen.game_canvas.canvas:
             
@@ -206,6 +266,21 @@ class HackAndSlashApp(App):
                 pos = self.game_manager.player.position
                 Color(0.2, 0.6, 1.0, 1)
                 Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
+                
+            # Draw Enemy
+            if self.game_manager.current_enemy and self.game_manager.current_enemy.is_alive:
+                e_pos = self.game_manager.current_enemy.position
+                e_name = self.game_manager.current_enemy.name
+                if e_name == "Tank":
+                    Color(0.8, 0.4, 0.0, 1) # Orange
+                    Rectangle(pos=(e_pos[0], e_pos[1]), size=(30, 30))
+                elif e_name == "Shooter":
+                    Color(0.8, 0.0, 0.8, 1) # Purple
+                    Rectangle(pos=(e_pos[0], e_pos[1]), size=(15, 15))
+                else:
+                    Color(0.8, 0.2, 0.2, 1) # Red (Normal)
+                    Rectangle(pos=(e_pos[0], e_pos[1]), size=(20, 20))
+
             
             # Draw Attacks
             current_time = Clock.get_time()
@@ -213,6 +288,13 @@ class HackAndSlashApp(App):
             Color(1.0, 0.2, 0.2, 1)
             for attack_x, attack_y, _ in self.active_attacks:
                 Rectangle(pos=(attack_x - 10, attack_y - 10), size=(20, 20))
+                
+            # Draw Projectiles
+            Color(1.0, 1.0, 0.0, 1) # Yellow projectiles
+            if 'active_projectiles' in state:
+                for p in state['active_projectiles']:
+                    Rectangle(pos=(p['pos'][0] - 5, p['pos'][1] - 5), size=(10, 10))
+
     
     def toggle_pause_menu(self):
         """Toggle pause menu"""
