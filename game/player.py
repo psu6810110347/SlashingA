@@ -55,9 +55,9 @@ class Player:
         """Level up"""
         self.level += 1
         self.max_hp += 10
-        self.hp = self.max_hp
+        self.hp += 10 # only add 10 HP on level up instead of full heal
         self.max_mp += 5
-        self.mp = self.max_mp
+        self.mp += 5  # only add 5 MP on level up instead of full restore
         self.attack += 2
         self.defense += 1
         self.exp_to_level = int(self.exp_to_level * 1.1)
