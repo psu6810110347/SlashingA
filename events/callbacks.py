@@ -93,6 +93,11 @@ class CallbackManager:
     def on_level_up(self, player_level):
         """Callback for level up event"""
         print(f"Player leveled up to: {player_level}")
+        if self.app and getattr(self.app, 'game_manager', None):
+            if player_level <= 10:
+                self.app.game_manager.player.score += 5
+            else:
+                self.app.game_manager.player.score += 10
     
     def on_enemy_defeated(self, enemy_id):
         """Callback for enemy defeated event"""
@@ -117,9 +122,17 @@ class CallbackManager:
             elif perk_id == 'speed':
                 player.speed += 1
                 self.app.game_manager.add_log("Gained +1 Movement Speed!")
+            elif perk_id == 'defense':
+                player.defense += 1
+                self.app.game_manager.add_log("Gained +1 Defense!")
                 
-        # Unpause the game
+        # Unpause the game and close the menu
         self.game_state['is_paused'] = False
+        if self.app and hasattr(self.app, 'root'):
+            game_screen = self.app.root.get_screen('game')
+            if hasattr(game_screen, 'perk_overlay'):
+                game_screen.perk_overlay.opacity = 0
+                game_screen.perk_overlay.disabled = True
 
     def update_player_hp(self, amount):
         """Update player HP"""

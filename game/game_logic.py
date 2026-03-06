@@ -12,8 +12,9 @@ import random
 class GameManager:
     """Main game manager"""
     
-    def __init__(self):
+    def __init__(self, callback_manager=None):
         """Initialize game manager"""
+        self.callback_manager = callback_manager
         self.player = Player()
         self.current_enemy = None
         self.level = 1
@@ -23,6 +24,7 @@ class GameManager:
         self.active_perks = []
         self.last_perk_spawn_time = 0
         self.active_projectiles = []
+        self.last_score_interval = 0
     
     def start_new_game(self):
         """Start new game"""
@@ -32,6 +34,7 @@ class GameManager:
         self.active_perks = []
         self.active_projectiles = []
         self.last_perk_spawn_time = 0
+        self.last_score_interval = 0
         self.time_manager.start_game_timer()
         self.spawn_enemy()
         print("New game started!")
@@ -54,46 +57,18 @@ class GameManager:
         self.add_log(f"A wild {self.current_enemy.name} appeared!")
         
     def spawn_perk(self):
-        """Spawn a perk at a random location"""
+        """Spawn a generic perk at a random location"""
         # We will bound it roughly to the screen resolution 1200x600 safely
         x = random.randint(100, 1000)
         y = random.randint(100, 600)
         
-        perk_type = random.choice(['max_hp', 'speed', 'defense', 'attack'])
-        
-        if perk_type == 'max_hp':
-            perk = {
-                'type': 'max_hp',
-                'label': '+10 Max HP',
-                'pos': [x, y],
-                'size': [25, 25]
-            }
-            self.add_log("A Max HP Perk has appeared!")
-        elif perk_type == 'speed':
-            perk = {
-                'type': 'speed',
-                'label': '+1 Speed',
-                'pos': [x, y],
-                'size': [25, 25]
-            }
-            self.add_log("A Speed Perk has appeared!")
-        elif perk_type == 'attack':
-            perk = {
-                'type': 'attack',
-                'label': '+1 Attack',
-                'pos': [x, y],
-                'size': [25, 25]
-            }
-            self.add_log("An Attack Perk has appeared!")
-        else:
-            perk = {
-                'type': 'defense',
-                'label': '+1 Defense',
-                'pos': [x, y],
-                'size': [25, 25]
-            }
-            self.add_log("A Defense Perk has appeared!")
-            
+        perk = {
+            'type': 'generic',
+            'label': 'Perk Orb',
+            'pos': [x, y],
+            'size': [25, 25]
+        }
+        self.add_log("A Perk Orb has appeared!")
         self.active_perks.append(perk)
     
     def player_attack(self):
@@ -201,6 +176,9 @@ class GameManager:
         self.is_combat_active = False
         self.level += 1
         
+        if self.callback_manager:
+            self.callback_manager.on_level_up(self.level)
+            
         # Spawn a new enemy!
         self.spawn_enemy()
 
@@ -225,6 +203,13 @@ class GameManager:
         if current_time - self.last_perk_spawn_time >= 5.0:
             self.spawn_perk()
             self.last_perk_spawn_time = current_time
+            
+        # Check for 5-minute score bonus
+        score_intervals = int(current_time // 300)
+        if score_intervals > self.last_score_interval:
+            self.player.score += 100
+            self.add_log("Survived 5 minutes! +100 Score!")
+            self.last_score_interval = score_intervals
             
         return {
             'player_stats': self.player.get_stats(),
