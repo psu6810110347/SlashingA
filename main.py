@@ -36,7 +36,7 @@ class HackAndSlashApp(App):
         """Build the application"""
         # Initialize managers
         self.callback_manager = CallbackManager(self)
-        self.game_manager = GameManager()
+        self.game_manager = GameManager(callback_manager=self.callback_manager)
         
         # Create main menu screen
         menu_screen = MainMenuScreen(
@@ -143,6 +143,8 @@ class HackAndSlashApp(App):
         if state['player_stats']:
             stats = state['player_stats']
             game_screen.level_label.text = f"Level: {stats['level']}"
+            if hasattr(game_screen, 'score_label'):
+                game_screen.score_label.text = f"Score: {stats['score']}"
             game_screen.side_hp_label.text = f"HP: {stats['hp']}/{stats['max_hp']}"
             game_screen.side_atk_label.text = f"Attack: {stats['attack']}"
             game_screen.side_def_label.text = f"Defense: {stats['defense']}"
@@ -230,7 +232,9 @@ class HackAndSlashApp(App):
                 perks_copy = state['active_perks'][:] # iterate over a copy so we can remove
                 for perk in perks_copy:
                     px, py = perk['pos']
-                    if perk['type'] == 'max_hp':
+                    if perk['type'] == 'generic':
+                        Color(1.0, 1.0, 1.0, 1)  # White Orb
+                    elif perk['type'] == 'max_hp':
                         Color(0.2, 1.0, 0.2, 1)  # Green Orb for HP
                     elif perk['type'] == 'speed':
                         Color(0.2, 0.2, 1.0, 1)  # Blue Orb for Speed
@@ -238,27 +242,21 @@ class HackAndSlashApp(App):
                         Color(1.0, 0.2, 0.2, 1)  # Red Orb for Attack
                     elif perk['type'] == 'defense':
                         Color(0.2, 1.0, 1.0, 1)  # Cyan Orb for Defense
+                    else:
+                        Color(1.0, 1.0, 1.0, 1)
                     Rectangle(pos=(px, py), size=(perk['size'][0], perk['size'][1]))
                     
                     # Collision check
                     player_x, player_y = self.game_manager.player.position
                     dist = ((player_x - px)**2 + (player_y - py)**2)**0.5
                     if dist < 25:
-                        if perk['type'] == 'max_hp':
-                            self.game_manager.player.max_hp += 10
-                            self.game_manager.player.hp += 10
-                            self.game_manager.add_log("Collected +10 Max HP Perk!")
-                        elif perk['type'] == 'speed':
-                            self.game_manager.player.speed += 1
-                            self.game_manager.add_log("Collected +1 Speed Perk!")
-                        elif perk['type'] == 'attack':
-                            self.game_manager.player.attack += 1
-                            self.game_manager.add_log("Collected +1 Attack Perk!")
-                        elif perk['type'] == 'defense':
-                            self.game_manager.player.defense += 1
-                            self.game_manager.add_log("Collected +1 Defense Perk!")
-                        # Remove it immediately so it doesn't re-trigger
                         self.game_manager.active_perks.remove(perk)
+                        self.callback_manager.game_state['is_paused'] = True
+                        
+                        # Show the hidden overlay
+                        game_screen = self.root.get_screen('game')
+                        game_screen.perk_overlay.opacity = 1
+                        game_screen.perk_overlay.disabled = False
                     
             # Draw Player
             if state['player_stats']:
