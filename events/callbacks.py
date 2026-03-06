@@ -138,3 +138,10 @@ class CallbackManager:
         if self.game_state['enemy_hp'] < 0:
             self.game_state['enemy_hp'] = 0
         return self.game_state['enemy_hp']
+
+    def on_restart_game(self, instance):
+        """Callback to restart the game from Game Over screen"""
+        print("Restarting game...")
+        if self.app:
+            self.app.show_game_screen()
+        self.game_state['is_paused'] = False
