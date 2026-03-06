@@ -21,6 +21,7 @@ class Player:
         self.defense = 0
         self.speed = 5
         self.gold = 0
+        self.score = 0
         self.inventory = []
         self.skills = []
         self.position = [0, 0]
@@ -98,4 +99,5 @@ class Player:
             'defense': self.defense,
             'speed': self.speed,
             'gold': self.gold,
+            'score': self.score,
         }

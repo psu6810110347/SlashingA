@@ -11,6 +11,7 @@ from kivy.uix.image import Image
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.screenmanager import Screen
 from kivy.core.window import Window
 from kivy.clock import Clock
@@ -84,11 +85,15 @@ class GameScreen(Screen):
     def __init__(self, callback_manager, **kwargs):
         super(GameScreen, self).__init__(**kwargs)
         
-        # Create main layout
-        main_layout = BoxLayout(
+        # Create main layout (FloatLayout to allow overlaying)
+        main_layout = FloatLayout()
+        
+        # Content layout (The actual game contents)
+        content_layout = BoxLayout(
             orientation='vertical',
             padding=5,
-            spacing=5
+            spacing=5,
+            size_hint=(1, 1)
         )
         self.callback_manager = callback_manager
         
@@ -108,21 +113,25 @@ class GameScreen(Screen):
         
         score_label = Label(
             text='Score: 0',
-            font_size='18sp',
-            size_hint_x=0.33
+            font_size='16sp',
+            size_hint_y=0.1
         )
-
+        self.score_label = Label(
+            text='Score: 0',
+            font_size='16sp',
+            size_hint_y=0.1
+        )
         self.time_label = Label(
             text='Time: 00:00',
-            font_size='18sp',
-            size_hint_x=0.33
+            font_size='16sp',
+            size_hint_y=0.1
         )
         
         hud.add_widget(self.level_label)
-        hud.add_widget(score_label)
+        hud.add_widget(self.score_label)
         hud.add_widget(self.time_label)
         
-        main_layout.add_widget(hud)
+        content_layout.add_widget(hud)
         
         # Lower Content Area (Left Stats + Right Game/Controls)
         content_area = BoxLayout(
@@ -178,7 +187,19 @@ class GameScreen(Screen):
         content_area.add_widget(self.stat_panel)
         content_area.add_widget(right_area)
         
-        main_layout.add_widget(content_area)
+        content_layout.add_widget(content_area)
+        main_layout.add_widget(content_layout)
+        
+        # Add the Perk Selection Overlay on top (hidden initially)
+        self.perk_overlay = PerkSelectionOverlay(
+            callback_manager=self.callback_manager,
+            size_hint=(1, 1),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        )
+        self.perk_overlay.opacity = 0
+        self.perk_overlay.disabled = True
+        main_layout.add_widget(self.perk_overlay)
+        
         self.add_widget(main_layout)
 
 
@@ -223,6 +244,61 @@ class PauseMenuPopup(Popup):
         content.add_widget(quit_btn)
         
         self.content = content
+
+class PerkSelectionOverlay(BoxLayout):
+    """Hidden overlay for selecting a perk when an orb is collected"""
+    def __init__(self, callback_manager, **kwargs):
+        super(PerkSelectionOverlay, self).__init__(**kwargs)
+        self.callback_manager = callback_manager
+        self.orientation = 'vertical'
+        self.padding = 50
+        self.spacing = 20
+        # Background color to dim the screen
+        from kivy.graphics import Color, Rectangle
+        with self.canvas.before:
+            Color(0, 0, 0, 0.8) # semi-transparent black
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+        self.bind(size=self._update_rect, pos=self._update_rect)
+        
+        # Instruction
+        info_label = Label(
+            text='[b]You collected a Perk Orb![/b]\nChoose your upgrade:',
+            font_size='32sp',
+            markup=True,
+            size_hint_y=0.4,
+            halign='center'
+        )
+        self.add_widget(info_label)
+        
+        # Buttons layout
+        btn_layout = BoxLayout(orientation='horizontal', spacing=20, size_hint_y=0.6)
+        
+        perks = [
+            ('max_hp', '+10 Max HP', (0.2, 0.8, 0.2, 1)),
+            ('speed', '+1 Speed', (0.2, 0.2, 0.8, 1)),
+            ('attack', '+1 Attack', (0.8, 0.2, 0.2, 1)),
+            ('defense', '+1 Defense', (0.2, 0.8, 0.8, 1))
+        ]
+        
+        for perk_id, perk_label, color in perks:
+            btn = Button(
+                text=perk_label,
+                background_color=color,
+                font_size='24sp'
+            )
+            # Create closure for the callback
+            btn.bind(on_press=lambda instance, p_id=perk_id: self.select_perk(p_id))
+            btn_layout.add_widget(btn)
+            
+        self.add_widget(btn_layout)
+        
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+
+    def select_perk(self, perk_id):
+        self.callback_manager.on_perk_selected(perk_id)
+
 
 
 class PlayerStatsDisplay(BoxLayout):
