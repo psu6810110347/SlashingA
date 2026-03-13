@@ -131,13 +131,7 @@ class HackAndSlashApp(App):
         state = self.game_manager.get_game_state()
                 # Check if player died
         if state['player_stats'] and state['player_stats']['hp'] <= 0:
-            game_over_screen = self.screen_manager.get_screen('game_over')
-            game_over_screen.final_level_label.text = f"Level Reached: {state['level']}"
-            if 'time_state' in state and state['time_state']:
-                game_over_screen.final_time_label.text = f"Time Survived: {state['time_state']['formatted_time']}"
-            
-            self.screen_manager.current = 'game_over'
-            Clock.unschedule(self.update_game_display) # Stop game loop
+            self.callback_manager.on_game_over(state)
             return
 
         if state['player_stats']:

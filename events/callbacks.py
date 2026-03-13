@@ -102,6 +102,20 @@ class CallbackManager:
     def on_enemy_defeated(self, enemy_id):
         """Callback for enemy defeated event"""
         print(f"Enemy defeated: {enemy_id}")
+
+    def on_game_over(self, state=None):
+        """Callback for game over event"""
+        print("Game Over!")
+        if self.app:
+            game_over_screen = self.app.screen_manager.get_screen('game_over')
+            if state:
+                game_over_screen.final_level_label.text = f"Level Reached: {state.get('level', 1)}"
+                if 'time_state' in state and state['time_state']:
+                    game_over_screen.final_time_label.text = f"Time Survived: {state['time_state']['formatted_time']}"
+            self.app.screen_manager.current = 'game_over'
+            from kivy.clock import Clock
+            Clock.unschedule(self.app.update_game_display)
+        self.game_state['is_paused'] = True
     
     def get_game_state(self):
         """Get current game state"""
