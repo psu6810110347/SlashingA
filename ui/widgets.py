@@ -239,7 +239,7 @@ class PauseMenuPopup(Popup):
             font_size='18sp',
             size_hint_y=0.3
         )
-        quit_btn.bind(on_press=self.callback_manager.on_quit_to_menu)
+        quit_btn.bind(on_press=self.callback_manager.on_return_to_menu)
         quit_btn.bind(on_press=self.dismiss)
         content.add_widget(quit_btn)
         
@@ -465,12 +465,12 @@ class GameOverScreen(Screen):
         
         self.final_level_label = Label(text='Level Reached: 1', font_size='20sp')
         self.final_time_label = Label(text='Time Survived: 00:00', font_size='20sp')
-        self.enemies_killed_label = Label(text='Enemies Defeated: 0', font_size='20sp')
+        self.score_label = Label(text='Final Score: 0', font_size='20sp')
         self.gold_earned_label = Label(text='Gold Earned: 0', font_size='20sp')
         
         stats_layout.add_widget(self.final_level_label)
         stats_layout.add_widget(self.final_time_label)
-        stats_layout.add_widget(self.enemies_killed_label)
+        stats_layout.add_widget(self.score_label)
         stats_layout.add_widget(self.gold_earned_label)
         
         main_layout.add_widget(stats_layout)
