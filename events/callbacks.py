@@ -56,6 +56,10 @@ class CallbackManager:
         # or checking step-based mechanics in the future.
         pass
 
+    def on_wave_start(self, wave_number, enemy_count):
+        """Callback for wave start event"""
+        print(f"Wave {wave_number} Started! {enemy_count} enemies approaching!")
+
     def on_attack(self, instance):
         """Callback for attack action"""
         print("Player attacking...")

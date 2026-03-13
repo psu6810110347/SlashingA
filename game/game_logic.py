@@ -16,7 +16,7 @@ class GameManager:
         """Initialize game manager"""
         self.callback_manager = callback_manager
         self.player = Player()
-        self.current_enemy = None
+        self.enemies = []
         self.level = 1
         self.combat_log = []
         self.is_combat_active = False
@@ -26,6 +26,7 @@ class GameManager:
         self.last_regen_time = 0
         self.active_projectiles = []
         self.last_score_interval = 0
+        self.wave_number = 0
     
     def start_new_game(self):
         """Start new game"""
@@ -34,29 +35,64 @@ class GameManager:
         self.combat_log = []
         self.active_perks = []
         self.active_projectiles = []
+        self.enemies = []
         self.last_perk_spawn_time = 0
         self.last_regen_time = 0
         self.last_score_interval = 0
+        self.wave_number = 0
+        self.enemies_to_spawn = 0
+        self.last_spawn_time = 0
         self.time_manager.start_game_timer()
-        self.spawn_enemy()
         print("New game started!")
+        self.start_next_wave()
     
+    def start_next_wave(self):
+        """Calculate and queue the next wave of enemies"""
+        self.wave_number += 1
+        
+        # Base wave is 5. Increase by 2 for every 2 minutes (120 seconds)
+        time_elapsed = self.time_manager.elapsed_time
+        extra_enemies = int(time_elapsed // 120) * 2
+        enemy_count = 5 + extra_enemies
+        
+        self.enemies_to_spawn = enemy_count
+        self.last_spawn_time = self.time_manager.elapsed_time
+        
+        if self.callback_manager:
+            self.callback_manager.on_wave_start(self.wave_number, enemy_count)
+            
+        self.is_combat_active = True
+
     def spawn_enemy(self):
-        """Spawn random enemy and scale based on time elapsed"""
+        """Spawn random enemy off-screen and scale based on time elapsed"""
         enemy_types = [NormalEnemy, TankEnemy, ShooterEnemy]
         enemy_class = random.choice(enemy_types)
         
         # Scale stats: 1 factor for every 5 minutes (300 seconds)
         scaling_factor = int(self.time_manager.elapsed_time // 300)
-        self.current_enemy = enemy_class(scaling_factor)
+        new_enemy = enemy_class(scaling_factor)
         
-        # Give enemy a random spawn position safely within 1200x600 boundaries
-        spawn_x = random.randint(100, 1100)
-        spawn_y = random.randint(100, 500)
-        self.current_enemy.position = [spawn_x, spawn_y]
+        # Spawn off-screen safely outside the Window borders (1280x720 + margins)
+        # Randomly choose one of the 4 edges to spawn just outside of
+        edge = random.choice(['top', 'bottom', 'left', 'right'])
         
-        self.is_combat_active = True
-        self.add_log(f"A wild {self.current_enemy.name} appeared!")
+        if edge == 'top':
+            spawn_x = random.randint(0, 1280)
+            spawn_y = random.randint(750, 900)
+        elif edge == 'bottom':
+            spawn_x = random.randint(0, 1280)
+            spawn_y = random.randint(-150, -50)
+        elif edge == 'left':
+            spawn_x = random.randint(-200, -50)
+            spawn_y = random.randint(0, 720)
+        else: # right
+            spawn_x = random.randint(1330, 1500)
+            spawn_y = random.randint(0, 720)
+            
+        new_enemy.position = [spawn_x, spawn_y]
+        
+        self.enemies.append(new_enemy)
+        self.add_log(f"A wild {new_enemy.name} appeared from the {edge}!")
         
     def spawn_perk(self):
         """Spawn a generic perk at a random location"""
@@ -75,126 +111,157 @@ class GameManager:
     
     def player_attack(self):
         """Handle player attack"""
-        if not self.is_combat_active or not self.current_enemy:
+        if not self.is_combat_active or not self.enemies:
             return None
         
-        # Check distance before allowing attack
         px, py = self.player.position
-        ex, ey = self.current_enemy.position
-        dist = ((px - ex)**2 + (py - ey)**2)**0.5
         
-        if dist > 60:
-            # Too far to hit
-            return 0
+        # Find the closest enemy within range
+        closest_enemy = None
+        min_dist = float('inf')
+        
+        for enemy in self.enemies:
+            ex, ey = enemy.position
+            dist = ((px - ex)**2 + (py - ey)**2)**0.5
+            if dist < min_dist and dist <= 60:
+                min_dist = dist
+                closest_enemy = enemy
+                
+        if not closest_enemy:
+            return 0 # Too far from all enemies
             
         damage = self.player.attack + random.randint(-2, 5)
-        actual_damage = self.current_enemy.take_damage(damage)
+        actual_damage = closest_enemy.take_damage(damage)
         
-        message = f"You dealt {actual_damage} damage to {self.current_enemy.name}!"
+        message = f"You dealt {actual_damage} damage to {closest_enemy.name}!"
         self.add_log(message)
         
-        if not self.current_enemy.is_alive:
-            self.defeat_enemy()
+        if not closest_enemy.is_alive:
+            self.defeat_enemy(closest_enemy)
         else:
             self.enemy_attack()
         
         return actual_damage
     
     def player_skill(self, skill_name="power_slash"):
-        """Handle player skill"""
-        if not self.is_combat_active or not self.current_enemy:
+        """Handle player skill (AOE hit on all nearby enemies)"""
+        if not self.is_combat_active or not self.enemies:
             return None
+            
+        px, py = self.player.position
+        total_damage = 0
+        enemies_hit = 0
         
-        damage = 30
-        actual_damage = self.current_enemy.take_damage(damage)
-        
-        message = f"You used {skill_name}! Dealt {actual_damage} damage!"
-        self.add_log(message)
-        
-        if not self.current_enemy.is_alive:
-            self.defeat_enemy()
-        else:
+        # Need to capture list beforehand as defeat_enemy modifies self.enemies
+        hit_enemies = []
+        for enemy in self.enemies:
+            ex, ey = enemy.position
+            dist = ((px - ex)**2 + (py - ey)**2)**0.5
+            if dist <= 100: # Wider AOE range
+                hit_enemies.append(enemy)
+                
+        for enemy in hit_enemies:
+            damage = 30
+            actual_damage = enemy.take_damage(damage)
+            total_damage += actual_damage
+            enemies_hit += 1
+            
+            if not enemy.is_alive:
+                self.defeat_enemy(enemy)
+                
+        if enemies_hit > 0:
+            message = f"You used {skill_name}! Dealt {total_damage} damage across {enemies_hit} enemies!"
+            self.add_log(message)
             self.enemy_attack()
-        
-        return actual_damage
+            
+        return total_damage
     
     def enemy_attack(self):
         """Handle enemy attack"""
-        if not self.current_enemy or not self.is_combat_active:
+        if not self.enemies or not self.is_combat_active:
             return None
-        
-        # If it's a Shooter, spawn a projectile instead of direct hit
-        if isinstance(self.current_enemy, ShooterEnemy):
-            # Check cooldown (every 2 seconds)
+            
+        total_damage_taken = 0
+            
+        for enemy in self.enemies:
+            # If it's a Shooter, spawn a projectile instead of direct hit
+            if isinstance(enemy, ShooterEnemy):
+                # Check cooldown (every 2 seconds)
+                current_time = self.time_manager.elapsed_time
+                if current_time - getattr(enemy, 'last_shot_time', 0) >= 2.0:
+                    enemy.last_shot_time = current_time
+                    
+                    ex, ey = enemy.position
+                    px, py = self.player.position
+                    
+                    # Calculate direction vector
+                    dx, dy = px - ex, py - ey
+                    dist = (dx**2 + dy**2)**0.5
+                    if dist > 0:
+                        dx /= dist
+                        dy /= dist
+                    
+                    # Projectile payload
+                    projectile = {
+                        'pos': [ex, ey],
+                        'dir': [dx, dy],
+                        'speed': 150,  # pixels per second
+                        'damage': enemy.attack
+                    }
+                    self.active_projectiles.append(projectile)
+                    self.add_log(f"{enemy.name} fired a projectile!")
+                continue
+                
+            # Normal melee attack
             current_time = self.time_manager.elapsed_time
-            if current_time - getattr(self.current_enemy, 'last_shot_time', 0) >= 2.0:
-                self.current_enemy.last_shot_time = current_time
-                
-                ex, ey = self.current_enemy.position
+            if current_time - getattr(enemy, 'last_shot_time', 0) >= 1.5:
+                ex, ey = enemy.position
                 px, py = self.player.position
+                dist = ((px - ex)**2 + (py - ey)**2)**0.5
                 
-                # Calculate direction vector
-                dx, dy = px - ex, py - ey
-                dist = (dx**2 + dy**2)**0.5
-                if dist > 0:
-                    dx /= dist
-                    dy /= dist
-                
-                # Projectile payload
-                projectile = {
-                    'pos': [ex, ey],
-                    'dir': [dx, dy],
-                    'speed': 150,  # pixels per second
-                    'damage': self.current_enemy.attack
-                }
-                self.active_projectiles.append(projectile)
-                self.add_log(f"{self.current_enemy.name} fired a projectile!")
-            return 0
-            
-        # Normal melee attack
-        current_time = self.time_manager.elapsed_time
-        if current_time - getattr(self.current_enemy, 'last_shot_time', 0) >= 1.5:
-            ex, ey = self.current_enemy.position
-            px, py = self.player.position
-            dist = ((px - ex)**2 + (py - ey)**2)**0.5
-            
-            # Melee range is around 50 pixels
-            if dist < 50:
-                self.current_enemy.last_shot_time = current_time
-                damage = self.current_enemy.attack_player()
-                actual_damage = self.player.take_damage(damage)
-                
-                message = f"{self.current_enemy.name} dealt {actual_damage} damage to you!"
-                self.add_log(message)
-                
-                if self.callback_manager:
-                    self.callback_manager.on_enemy_attack(actual_damage, self.current_enemy.name)
-                
-                if not self.player.is_alive:
-                    self.player_defeated()
-                
-                return actual_damage
-        return 0
+                # Melee range is around 50 pixels
+                if dist < 50:
+                    enemy.last_shot_time = current_time
+                    damage = enemy.attack_player()
+                    actual_damage = self.player.take_damage(damage)
+                    total_damage_taken += actual_damage
+                    
+                    message = f"{enemy.name} dealt {actual_damage} damage to you!"
+                    self.add_log(message)
+                    
+                    if self.callback_manager:
+                        self.callback_manager.on_enemy_attack(actual_damage, enemy.name)
+                    
+                    if not self.player.is_alive:
+                        self.player_defeated()
+                        return total_damage_taken
+                        
+        return total_damage_taken
 
 
     
-    def defeat_enemy(self):
-        """Handle enemy defeat"""
-        rewards = self.current_enemy.defeat()
+    def defeat_enemy(self, enemy):
+        """Handle specific enemy defeat"""
+        rewards = enemy.defeat()
         self.player.gain_exp(rewards['exp'])
         self.player.add_gold(rewards['gold'])
         
-        message = f"{self.current_enemy.name} defeated! Gained {rewards['exp']} EXP and {rewards['gold']} gold!"
+        message = f"{enemy.name} defeated! Gained {rewards['exp']} EXP and {rewards['gold']} gold!"
         self.add_log(message)
         
-        self.is_combat_active = False
-        self.level += 1
-        
-        if self.callback_manager:
-            self.callback_manager.on_level_up(self.level)
+        if enemy in self.enemies:
+            self.enemies.remove(enemy)
             
-        # Spawn a new enemy!
-        self.spawn_enemy()
+        # Check if wave is cleared
+        if len(self.enemies) == 0 and self.enemies_to_spawn <= 0:
+            self.is_combat_active = False
+            self.level += 1
+            
+            if self.callback_manager:
+                self.callback_manager.on_level_up(self.level)
+                
+            # Start the next wave!
+            self.start_next_wave()
 
     
     def player_defeated(self):
@@ -225,6 +292,14 @@ class GameManager:
             self.add_log("Survived 5 minutes! +100 Score!")
             self.last_score_interval = score_intervals
             
+        # Enemy Staggered Spawning logic
+        # Spawn an enemy every 1.5 seconds if there are enemies left in the queue
+        if self.enemies_to_spawn > 0:
+            if current_time - self.last_spawn_time >= 1.5:
+                self.spawn_enemy()
+                self.enemies_to_spawn -= 1
+                self.last_spawn_time = current_time
+
         # Passive HP Regeneration (1 HP every 3 seconds)
         if current_time - self.last_regen_time >= 3.0:
             if self.player.hp > 0 and self.player.hp < self.player.max_hp:
@@ -233,8 +308,9 @@ class GameManager:
             
         return {
             'player_stats': self.player.get_stats(),
-            'enemy_stats': self.current_enemy.get_stats() if self.current_enemy else None,
+            'enemy_stats': [e.get_stats() for e in self.enemies], # Now returns a list
             'level': self.level,
+            'wave': self.wave_number,
             'is_combat_active': self.is_combat_active,
             'combat_log': self.combat_log,
             'time_state': self.time_manager.get_game_state(),
