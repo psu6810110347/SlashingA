@@ -116,6 +116,10 @@ class CallbackManager:
             from kivy.clock import Clock
             Clock.unschedule(self.app.update_game_display)
         self.game_state['is_paused'] = True
+
+    def on_enemy_attack(self, damage, enemy_name):
+        """Callback triggered when an enemy successfully attacks the player"""
+        print(f"{enemy_name} attacked for {damage} damage!")
     
     def get_game_state(self):
         """Get current game state"""

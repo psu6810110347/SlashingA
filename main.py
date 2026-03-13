@@ -209,6 +209,8 @@ class HackAndSlashApp(App):
                 if dist < 20: # Hit player
                     actual_damage = self.game_manager.player.take_damage(p['damage'])
                     self.game_manager.add_log(f"Projectile hit you for {actual_damage} damage!")
+                    self.callback_manager.on_enemy_attack(actual_damage, "Projectile")
+                    
                     if not self.game_manager.player.is_alive:
                         self.game_manager.player_defeated()
                 elif 0 <= p['pos'][0] <= Window.width and 0 <= p['pos'][1] <= Window.height:

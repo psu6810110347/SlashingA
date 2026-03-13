@@ -167,6 +167,9 @@ class GameManager:
                 message = f"{self.current_enemy.name} dealt {actual_damage} damage to you!"
                 self.add_log(message)
                 
+                if self.callback_manager:
+                    self.callback_manager.on_enemy_attack(actual_damage, self.current_enemy.name)
+                
                 if not self.player.is_alive:
                     self.player_defeated()
                 
