@@ -239,7 +239,7 @@ class PauseMenuPopup(Popup):
             font_size='18sp',
             size_hint_y=0.3
         )
-        quit_btn.bind(on_press=self.callback_manager.on_quit_to_menu)
+        quit_btn.bind(on_press=self.callback_manager.on_return_to_menu)
         quit_btn.bind(on_press=self.dismiss)
         content.add_widget(quit_btn)
         

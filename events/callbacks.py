@@ -47,14 +47,15 @@ class CallbackManager:
             self.app.show_menu_screen()
         self.game_state['is_paused'] = False
     
-    def on_quit_to_menu(self, instance):
-        """Callback for quit to menu from pause"""
-        print("Quitting to menu...")
-        if self.app:
-            self.app.show_menu_screen()
-        self.game_state['is_paused'] = False
+
     
     # Game Callbacks
+    def on_player_move(self, dx, dy):
+        """Callback for player movement action"""
+        # This can be used for logging, triggering movement-based events, 
+        # or checking step-based mechanics in the future.
+        pass
+
     def on_attack(self, instance):
         """Callback for attack action"""
         print("Player attacking...")

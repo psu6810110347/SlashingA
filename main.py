@@ -169,6 +169,9 @@ class HackAndSlashApp(App):
             new_x = max(0, min(new_x, Window.width - 20))
             new_y = max(game_screen.game_canvas.y, min(new_y, game_screen.game_canvas.y + game_screen.game_canvas.height - 20))
             
+            if dx != 0 or dy != 0:
+                self.callback_manager.on_player_move(dx, dy)
+            
             player.position = [new_x, new_y]
             if hasattr(player, 'update'):
                 player.update(dt)
