@@ -67,13 +67,6 @@ class CallbackManager:
             if self.app and hasattr(self.app, 'game_manager') and self.app.game_manager:
                 self.app.game_manager.player_attack()
     
-    def on_use_skill(self, instance):
-        """Callback for using skill"""
-        print("Using skill...")
-        if not self.game_state['is_paused']:
-            if self.app and hasattr(self.app, 'game_manager') and self.app.game_manager:
-                self.app.game_manager.player_skill()
-    
     def on_pause(self, instance):
         """Callback for pause button"""
         print("Pausing game...")
@@ -85,16 +78,7 @@ class CallbackManager:
         """Callback for resume game"""
         print("Resuming game...")
         self.game_state['is_paused'] = False
-    
-    def on_settings(self, instance):
-        """Callback for settings button"""
-        print("Opening settings...")
-    
-    # Additional Callbacks
-    def on_item_drop(self, item_id):
-        """Callback for item drop event"""
-        print(f"Item dropped: {item_id}")
-    
+        
     def on_level_up(self, player_level):
         """Callback for level up event"""
         print(f"Player leveled up to: {player_level}")
@@ -103,13 +87,8 @@ class CallbackManager:
                 self.app.game_manager.player.score += 5
             else:
                 self.app.game_manager.player.score += 10
-    
-    def on_enemy_defeated(self, enemy_id):
-        """Callback for enemy defeated event"""
-        print(f"Enemy defeated: {enemy_id}")
 
     def on_game_over(self, state=None):
-        """Callback for game over event"""
         print("Game Over!")
         if self.app:
             game_over_screen = self.app.screen_manager.get_screen('game_over')
@@ -117,6 +96,11 @@ class CallbackManager:
                 game_over_screen.final_level_label.text = f"Level Reached: {state.get('level', 1)}"
                 if 'time_state' in state and state['time_state']:
                     game_over_screen.final_time_label.text = f"Time Survived: {state['time_state']['formatted_time']}"
+                if 'player_stats' in state and state['player_stats']:
+                    gold = state['player_stats'].get('gold', 0)
+                    score = state['player_stats'].get('score', 0)
+                    game_over_screen.score_label.text = f"Final Score: {score}"
+                    game_over_screen.gold_earned_label.text = f"Gold Earned: {gold}"
             self.app.screen_manager.current = 'game_over'
             from kivy.clock import Clock
             Clock.unschedule(self.app.update_game_display)
