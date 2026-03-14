@@ -51,6 +51,7 @@ class GameManager:
     def start_next_wave(self):
         """Calculate and queue the next wave of enemies"""
         self.wave_number += 1
+        self._boss_spawned_this_wave = False
         
         # Base wave is 5. Increase by 2 for every 2 minutes (120 seconds)
         time_elapsed = self.time_manager.elapsed_time
@@ -84,16 +85,17 @@ class GameManager:
         return count
 
     def spawn_boss(self):
-        """Spawn the Boss enemy"""
-        boss = Boss("Boss", level=self.level)
+        """Spawn the Boss enemy with scaling based on elapsed time"""
+        scaling_factor = int(self.time_manager.elapsed_time // 300)
+        boss = Boss(scaling_factor)
         # Spawn off-screen
         spawn_x = random.randint(0, 1280)
         spawn_y = random.randint(750, 900)
         boss.position = [spawn_x, spawn_y]
         self.enemies.append(boss)
-        self.add_log("WARNING: A mighty Boss has appeared!")
+        self.add_log(f"WARNING: A mighty Boss has appeared! (Scale: {scaling_factor})")
         if self.callback_manager and hasattr(self.callback_manager, 'on_boss_spawn'):
-            self.callback_manager.on_boss_spawn(self.level)
+            self.callback_manager.on_boss_spawn(self.wave_number)
 
     def spawn_enemy(self):
         """Spawn random enemy off-screen and scale based on time elapsed"""
@@ -324,16 +326,17 @@ class GameManager:
             self.add_log("Survived 5 minutes! +100 Score!")
             self.last_score_interval = score_intervals
             
-        # Check for Boss Spawn (Every 5 minutes = 300 seconds)
-        boss_intervals = int(current_time // 300)
-        if boss_intervals > 0 and current_time - self.last_boss_spawn_time >= 300:
-            if self.callback_manager and self.callback_manager.app and self.callback_manager.app.root:
-                widget_count = self.count_total_widgets(self.callback_manager.app.root)
-                callback_count = self.count_callbacks()
-                self.add_log(f"Verification Check: Widgets={widget_count}/30, Callbacks={callback_count}/10")
-                if widget_count >= 30 and callback_count >= 10:
-                    self.spawn_boss()
-                    self.last_boss_spawn_time = current_time
+        # Check for Boss Spawn (Every 10 waves)
+        if self.wave_number > 0 and self.wave_number % 10 == 0:
+            # Only spawn boss once per wave milestone
+            if not getattr(self, '_boss_spawned_this_wave', False):
+                if self.callback_manager and self.callback_manager.app and self.callback_manager.app.root:
+                    widget_count = self.count_total_widgets(self.callback_manager.app.root)
+                    callback_count = self.count_callbacks()
+                    self.add_log(f"Verification Check: Widgets={widget_count}/30, Callbacks={callback_count}/10")
+                    if widget_count >= 30 and callback_count >= 10:
+                        self.spawn_boss()
+                        self._boss_spawned_this_wave = True
             
         # Enemy Staggered Spawning logic
         # Spawn an enemy every 1.5 seconds if there are enemies left in the queue

@@ -183,11 +183,12 @@ class Skeleton(Enemy):
 
 class Boss(Enemy):
     """Boss enemy"""
-    def __init__(self, name="Boss", level=1):
-        super().__init__(name, level)
-        self.hp = 100 + (level * 50)
+    def __init__(self, scaling_factor=0):
+        super().__init__("Boss", 1)
+        self.hp = 100 + (scaling_factor * 50)
         self.max_hp = self.hp
-        self.attack = 15 + (level * 3)
-        self.defense = 5 + level
-        self.exp_reward = 500 * level
-        self.gold_reward = 100 * level
+        self.attack = 15 + (scaling_factor * 5)
+        self.defense = 5 + (scaling_factor * 2)
+        self.speed = 2
+        self.exp_reward = 500 + (scaling_factor * 100)
+        self.gold_reward = 100 + (scaling_factor * 50)

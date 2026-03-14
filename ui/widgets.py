@@ -190,17 +190,31 @@ class GameScreen(Screen):
         self.stat_panel.add_widget(self.side_def_label)
         self.stat_panel.add_widget(self.side_spd_label)
 
-        # Extra information/placeholder widgets to increase actual widget count
-        # and provide future slots for displaying additional stats or perks.
-        self.perk_slot_labels = []
-        for i in range(1, 16):
+        # Perk collection tracking slots (4 types)
+        perk_section_title = Label(
+            text='[b]PERKS COLLECTED[/b]',
+            markup=True,
+            font_size='14sp',
+            size_hint_y=None,
+            height=24
+        )
+        self.stat_panel.add_widget(perk_section_title)
+
+        self.perk_slot_labels = {}
+        perk_types = [
+            ('max_hp', 'Max HP'),
+            ('speed', 'Speed'),
+            ('attack', 'Attack'),
+            ('defense', 'Defense'),
+        ]
+        for perk_id, perk_name in perk_types:
             slot_label = Label(
-                text=f'Perk Slot {i}: Empty',
+                text=f'{perk_name}: 0',
                 font_size='12sp',
                 size_hint_y=None,
                 height=18
             )
-            self.perk_slot_labels.append(slot_label)
+            self.perk_slot_labels[perk_id] = slot_label
             self.stat_panel.add_widget(slot_label)
 
         enemy_section_title = Label(
@@ -490,7 +504,13 @@ class EnemyDetailOverlay(BoxLayout):
         self.add_widget(title)
 
         # Scrollable list of enemy types
-        self.scroll_view = ScrollView(size_hint_y=0.9)
+        self.scroll_view = ScrollView(
+            size_hint_y=0.9,
+            do_scroll_x=False,
+            do_scroll_y=True,
+            scroll_type=['bars', 'content'],
+            bar_width=10
+        )
         self.codex_list = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
@@ -509,32 +529,33 @@ class EnemyDetailOverlay(BoxLayout):
         self.rect.size = instance.size
 
     def _populate_codex(self):
-        """Populate the codex with known enemy types."""
+        """Populate the codex with enemy types that actually appear in the game."""
         enemy_types = [
-            {'name': 'Goblin', 'hp': 25, 'attack': 5, 'speed': 4, 'desc': 'A basic melee attacker.'},
-            {'name': 'Orc', 'hp': 55, 'attack': 10, 'speed': 3, 'desc': 'A stronger, slower melee attacker.'},
-            {'name': 'Skeleton', 'hp': 33, 'attack': 7, 'speed': 4, 'desc': 'A standard enemy type.'},
-            {'name': 'Normal', 'hp': 10, 'attack': 10, 'speed': 4, 'desc': 'Standard red enemy.'},
-            {'name': 'Tank', 'hp': 20, 'attack': 10, 'speed': 3, 'desc': 'Orange enemy with more HP.'},
-            {'name': 'Shooter', 'hp': 10, 'attack': 10, 'speed': 4, 'desc': 'Purple enemy that fires projectiles.'},
-            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'desc': 'A mighty Boss that spawns every 5 minutes.'}
+            {'name': 'Normal', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Red',
+             'desc': 'A standard red enemy. Fast and aggressive melee attacker.'},
+            {'name': 'Tank', 'hp': 20, 'attack': 10, 'speed': 3, 'color': 'Orange',
+             'desc': 'An orange enemy with more HP. Slower but tougher to kill.'},
+            {'name': 'Shooter', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Purple',
+             'desc': 'A purple ranged enemy that fires yellow projectiles at you.'},
+            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'color': 'Dark Red',
+             'desc': 'A mighty Boss that spawns every 5 minutes. Very high HP and damage.'}
         ]
 
         for enemy in enemy_types:
-            entry = BoxLayout(orientation='vertical', size_hint_y=None, height=100, padding=5)
+            entry = BoxLayout(orientation='vertical', size_hint_y=None, height=90, padding=5)
             
-            # Simple border
+            # Background
             from kivy.graphics import Color, Rectangle
             with entry.canvas.before:
-                Color(0.2, 0.2, 0.2, 1)
+                Color(0.15, 0.15, 0.15, 1)
                 entry.bg_rect = Rectangle(size=entry.size, pos=entry.pos)
             entry.bind(size=self._update_entry_bg, pos=self._update_entry_bg)
 
-            name_lbl = Label(text=f"[b]{enemy['name']}[/b]", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
+            name_lbl = Label(text=f"[b]{enemy['name']}[/b]  ({enemy['color']})", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
             name_lbl.bind(size=name_lbl.setter('text_size'))
-            stats_lbl = Label(text=f"HP: {enemy['hp']} | Attack: {enemy['attack']} | Speed: {enemy['speed']}", font_size='14sp', size_hint_y=0.3, halign='left')
+            stats_lbl = Label(text=f"HP: {enemy['hp']}  |  Attack: {enemy['attack']}  |  Speed: {enemy['speed']}", font_size='14sp', size_hint_y=0.3, halign='left')
             stats_lbl.bind(size=stats_lbl.setter('text_size'))
-            desc_lbl = Label(text=f"[i]{enemy['desc']}[/i]", markup=True, font_size='14sp', size_hint_y=0.4, halign='left')
+            desc_lbl = Label(text=f"[i]{enemy['desc']}[/i]", markup=True, font_size='13sp', size_hint_y=0.4, halign='left')
             desc_lbl.bind(size=desc_lbl.setter('text_size'))
 
             entry.add_widget(name_lbl)
