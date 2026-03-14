@@ -109,6 +109,14 @@ class CallbackManager:
     def on_enemy_attack(self, damage, enemy_name):
         """Callback triggered when an enemy successfully attacks the player"""
         print(f"{enemy_name} attacked for {damage} damage!")
+        
+    def on_boss_spawn(self, level):
+        """Callback triggered when a boss spawns"""
+        print(f"Boss Spawned at level {level}!")
+        
+    def on_settings(self, instance):
+        """Callback for settings button in pause menu"""
+        print("Settings menu opened")
     
     def get_game_state(self):
         """Get current game state"""
