@@ -148,6 +148,13 @@ class HackAndSlashApp(App):
         if hasattr(game_screen, 'update_enemy_widgets'):
             game_screen.update_enemy_widgets(enemies_stats)
 
+        # Update top-right enemy detail panel (separate widget from enemy list)
+        if hasattr(game_screen, 'enemy_detail_panel'):
+            game_screen.enemy_detail_panel.update_info(
+                enemies_stats,
+                state.get('time_state')
+            )
+
         # Update boss HP widget (shows boss if present, otherwise hidden/empty)
         if hasattr(game_screen, 'boss_hp_bar') and hasattr(game_screen, 'boss_hp_label'):
             boss_stats = next((e for e in enemies_stats if e.get('name') == 'Boss'), None)

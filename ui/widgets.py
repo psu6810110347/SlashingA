@@ -105,7 +105,7 @@ class GameScreen(Screen):
             padding=5
         )
 
-        # First row: basic stats
+        # First row: basic stats + enemy detail button (top-right)
         top_row = BoxLayout(
             orientation='horizontal',
             size_hint_y=0.5,
@@ -116,7 +116,7 @@ class GameScreen(Screen):
         self.level_label = Label(
             text='Level: 1',
             font_size='18sp',
-            size_hint_x=0.33
+            size_hint_x=0.3
         )
         
         self.score_label = Label(
@@ -130,9 +130,17 @@ class GameScreen(Screen):
             size_hint_y=0.1
         )
 
+        self.enemy_info_button = Button(
+            text='ENEMY DETAIL',
+            font_size='14sp',
+            size_hint_x=0.25
+        )
+        self.enemy_info_button.bind(on_press=self.on_enemy_info_pressed)
+
         top_row.add_widget(self.level_label)
         top_row.add_widget(self.score_label)
         top_row.add_widget(self.time_label)
+        top_row.add_widget(self.enemy_info_button)
 
         # Second row: Boss HP bar centered
         boss_row = BoxLayout(
@@ -250,6 +258,14 @@ class GameScreen(Screen):
         
         content_layout.add_widget(content_area)
         main_layout.add_widget(content_layout)
+
+        # Top-right enemy detail panel (initially hidden and non-interactive)
+        self.enemy_detail_panel = EnemyDetailPanel()
+        self.enemy_detail_panel.opacity = 0
+        self.enemy_detail_panel.disabled = True
+        # size_hint (0, 0) so it does not block clicks when hidden
+        self.enemy_detail_panel.size_hint = (0, 0)
+        main_layout.add_widget(self.enemy_detail_panel)
         
         # Add the Perk Selection Overlay on top (hidden initially)
         self.perk_overlay = PerkSelectionOverlay(
@@ -262,6 +278,22 @@ class GameScreen(Screen):
         main_layout.add_widget(self.perk_overlay)
         
         self.add_widget(main_layout)
+
+    def on_enemy_info_pressed(self, instance):
+        """Pause game and toggle enemy detail panel"""
+        if self.callback_manager:
+            self.callback_manager.on_pause(None)
+        is_hidden = self.enemy_detail_panel.opacity == 0
+        if is_hidden:
+            # Show and restore size so it appears at top-right
+            self.enemy_detail_panel.size_hint = (0.25, 0.28)
+            self.enemy_detail_panel.disabled = False
+            self.enemy_detail_panel.opacity = 1
+        else:
+            # Hide and shrink so it no longer intercepts clicks
+            self.enemy_detail_panel.opacity = 0
+            self.enemy_detail_panel.disabled = True
+            self.enemy_detail_panel.size_hint = (0, 0)
 
     def update_enemy_widgets(self, enemies_stats):
         """Update the enemy widgets list based on current enemy stats"""
@@ -425,6 +457,95 @@ class EnemyDisplay(BoxLayout):
         self.enemy_name.text = f'Enemy: {name}'
         self.enemy_hp_bar.value = hp
         self.enemy_hp_bar.max = max_hp
+
+
+class EnemyDetailPanel(BoxLayout):
+    """Detailed enemy info panel (top-right, separate from list widgets)"""
+    def __init__(self, **kwargs):
+        super(EnemyDetailPanel, self).__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.padding = 8
+        self.spacing = 4
+        self.size_hint = (0.25, 0.28)
+        self.pos_hint = {'right': 1, 'top': 1}
+
+        title = Label(
+            text='[b]ENEMY DETAIL[/b]',
+            markup=True,
+            font_size='16sp',
+            size_hint_y=None,
+            height=24
+        )
+        self.add_widget(title)
+
+        self.name_label = Label(
+            text='Name: -',
+            font_size='14sp',
+            size_hint_y=None,
+            height=22
+        )
+        self.hp_label = Label(
+            text='HP: 0/0',
+            font_size='14sp',
+            size_hint_y=None,
+            height=22
+        )
+        self.damage_label = Label(
+            text='Damage: 0',
+            font_size='14sp',
+            size_hint_y=None,
+            height=22
+        )
+        self.speed_label = Label(
+            text='Speed: 0',
+            font_size='14sp',
+            size_hint_y=None,
+            height=22
+        )
+        self.scale_time_label = Label(
+            text='Time: 00:00',
+            font_size='14sp',
+            size_hint_y=None,
+            height=22
+        )
+
+        for lbl in [
+            self.name_label,
+            self.hp_label,
+            self.damage_label,
+            self.speed_label,
+            self.scale_time_label,
+        ]:
+            self.add_widget(lbl)
+
+    def update_info(self, enemy_stats_list, time_state):
+        """Update panel from full enemy list and time state"""
+        enemy = enemy_stats_list[0] if enemy_stats_list else None
+        if not enemy:
+            self.name_label.text = 'Name: -'
+            self.hp_label.text = 'HP: 0/0'
+            self.damage_label.text = 'Damage: 0'
+            self.speed_label.text = 'Speed: 0'
+            if time_state and 'formatted_time' in time_state:
+                self.scale_time_label.text = f"Time: {time_state['formatted_time']}"
+            else:
+                self.scale_time_label.text = 'Time: 00:00'
+            return
+
+        name = enemy.get('name', '-')
+        hp = enemy.get('hp', 0)
+        max_hp = enemy.get('max_hp', 0)
+        attack = enemy.get('attack', 0)
+        speed = enemy.get('speed', 0)
+
+        self.name_label.text = f'Name: {name}'
+        self.hp_label.text = f'HP: {hp}/{max_hp}'
+        self.damage_label.text = f'Damage: {attack}'
+        self.speed_label.text = f'Speed: {speed}'
+        if time_state and 'formatted_time' in time_state:
+            self.scale_time_label.text = f"Time: {time_state['formatted_time']}"
+        else:
+            self.scale_time_label.text = 'Time: 00:00'
 
 
 class CombatLog(ScrollView):
