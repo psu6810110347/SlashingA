@@ -99,9 +99,17 @@ class GameScreen(Screen):
         
         # Top HUD bar
         hud = BoxLayout(
-            size_hint_y=0.1,
-            spacing=10,
+            orientation='vertical',
+            size_hint_y=0.16,
+            spacing=4,
             padding=5
+        )
+
+        # First row: basic stats
+        top_row = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=0.5,
+            spacing=10
         )
         
         # Player stats labels (Removed HP from top)
@@ -111,11 +119,6 @@ class GameScreen(Screen):
             size_hint_x=0.33
         )
         
-        score_label = Label(
-            text='Score: 0',
-            font_size='16sp',
-            size_hint_y=0.1
-        )
         self.score_label = Label(
             text='Score: 0',
             font_size='16sp',
@@ -126,11 +129,36 @@ class GameScreen(Screen):
             font_size='16sp',
             size_hint_y=0.1
         )
-        
-        hud.add_widget(self.level_label)
-        hud.add_widget(self.score_label)
-        hud.add_widget(self.time_label)
-        
+
+        top_row.add_widget(self.level_label)
+        top_row.add_widget(self.score_label)
+        top_row.add_widget(self.time_label)
+
+        # Second row: Boss HP bar centered
+        boss_row = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=0.5,
+            padding=[80, 0, 80, 0],  # left, top, right, bottom
+            spacing=8
+        )
+
+        self.boss_hp_label = Label(
+            text='Boss: None',
+            font_size='16sp',
+            size_hint_x=0.2
+        )
+        self.boss_hp_bar = ProgressBar(
+            value=0,
+            max=100,
+            size_hint_x=0.8
+        )
+
+        boss_row.add_widget(self.boss_hp_label)
+        boss_row.add_widget(self.boss_hp_bar)
+
+        hud.add_widget(top_row)
+        hud.add_widget(boss_row)
+
         content_layout.add_widget(hud)
         
         # Lower Content Area (Left Stats + Right Game/Controls)

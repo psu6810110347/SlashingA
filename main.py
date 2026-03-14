@@ -144,8 +144,26 @@ class HackAndSlashApp(App):
             game_screen.side_def_label.text = f"Defense: {stats['defense']}"
             game_screen.side_spd_label.text = f"Speed: {stats['speed']}"
 
-        if 'enemy_stats' in state and hasattr(game_screen, 'update_enemy_widgets'):
-            game_screen.update_enemy_widgets(state['enemy_stats'])
+        enemies_stats = state.get('enemy_stats', [])
+        if hasattr(game_screen, 'update_enemy_widgets'):
+            game_screen.update_enemy_widgets(enemies_stats)
+
+        # Update boss HP widget (shows boss if present, otherwise hidden/empty)
+        if hasattr(game_screen, 'boss_hp_bar') and hasattr(game_screen, 'boss_hp_label'):
+            boss_stats = next((e for e in enemies_stats if e.get('name') == 'Boss'), None)
+            if boss_stats:
+                hp = boss_stats.get('hp', 0)
+                max_hp = boss_stats.get('max_hp', 0) or 1
+                game_screen.boss_hp_bar.max = max_hp
+                game_screen.boss_hp_bar.value = hp
+                game_screen.boss_hp_label.text = f"Boss: {hp}/{max_hp}"
+                game_screen.boss_hp_bar.opacity = 1
+                game_screen.boss_hp_label.opacity = 1
+            else:
+                game_screen.boss_hp_bar.value = 0
+                game_screen.boss_hp_bar.opacity = 0
+                game_screen.boss_hp_label.text = "Boss: None"
+                game_screen.boss_hp_label.opacity = 0.6
         
         if 'time_state' in state and state['time_state']:
             game_screen.time_label.text = f"Time: {state['time_state']['formatted_time']}"
