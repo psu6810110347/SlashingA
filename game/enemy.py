@@ -55,6 +55,9 @@ class Enemy:
             'max_hp': self.max_hp,
             'attack': self.attack,
             'defense': self.defense,
+            # Some enemies (NormalEnemy, TankEnemy, ShooterEnemy, Boss) define speed;
+            # use getattr so base class still works if speed is missing.
+            'speed': getattr(self, 'speed', 0),
         }
 
 

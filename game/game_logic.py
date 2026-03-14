@@ -72,13 +72,6 @@ class GameManager:
             for child in root_widget.children:
                 count += self.count_total_widgets(child)
         return count
-        
-    def check_true_widget_count(self):
-        """Count widgets recursively through the screen manager"""
-        if not self.callback_manager or not self.callback_manager.app or not self.callback_manager.app.screen_manager:
-            return 0
-            
-        return self.count_total_widgets(self.callback_manager.app.screen_manager)
 
     def count_callbacks(self):
         """Count methods in callback_manager that start with 'on_'"""
@@ -334,12 +327,13 @@ class GameManager:
         # Check for Boss Spawn (Every 5 minutes = 300 seconds)
         boss_intervals = int(current_time // 300)
         if boss_intervals > 0 and current_time - self.last_boss_spawn_time >= 300:
-            widget_count = self.check_true_widget_count()
-            callback_count = self.count_callbacks()
-            self.add_log(f"Verification Check: Widgets={widget_count}/30, Callbacks={callback_count}/10")
-            if widget_count >= 30 and callback_count >= 10:
-                self.spawn_boss()
-                self.last_boss_spawn_time = current_time
+            if self.callback_manager and self.callback_manager.app and self.callback_manager.app.root:
+                widget_count = self.count_total_widgets(self.callback_manager.app.root)
+                callback_count = self.count_callbacks()
+                self.add_log(f"Verification Check: Widgets={widget_count}/30, Callbacks={callback_count}/10")
+                if widget_count >= 30 and callback_count >= 10:
+                    self.spawn_boss()
+                    self.last_boss_spawn_time = current_time
             
         # Enemy Staggered Spawning logic
         # Spawn an enemy every 1.5 seconds if there are enemies left in the queue

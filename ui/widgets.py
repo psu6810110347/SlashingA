@@ -88,6 +88,9 @@ class GameScreen(Screen):
         # Create main layout (FloatLayout to allow overlaying)
         main_layout = FloatLayout()
         
+        # Track which enemy index is focused in the detail overlay
+        self.enemy_detail_index = 0
+        
         # Content layout (The actual game contents)
         content_layout = BoxLayout(
             orientation='vertical',
@@ -130,17 +133,9 @@ class GameScreen(Screen):
             size_hint_y=0.1
         )
 
-        self.enemy_info_button = Button(
-            text='ENEMY DETAIL',
-            font_size='14sp',
-            size_hint_x=0.25
-        )
-        self.enemy_info_button.bind(on_press=self.on_enemy_info_pressed)
-
         top_row.add_widget(self.level_label)
         top_row.add_widget(self.score_label)
         top_row.add_widget(self.time_label)
-        top_row.add_widget(self.enemy_info_button)
 
         # Second row: Boss HP bar centered
         boss_row = BoxLayout(
@@ -259,13 +254,14 @@ class GameScreen(Screen):
         content_layout.add_widget(content_area)
         main_layout.add_widget(content_layout)
 
-        # Top-right enemy detail panel (initially hidden and non-interactive)
-        self.enemy_detail_panel = EnemyDetailPanel()
-        self.enemy_detail_panel.opacity = 0
-        self.enemy_detail_panel.disabled = True
-        # size_hint (0, 0) so it does not block clicks when hidden
-        self.enemy_detail_panel.size_hint = (0, 0)
-        main_layout.add_widget(self.enemy_detail_panel)
+        # Centered enemy codex overlay (controlled via keyboard Tab, not clickable)
+        self.enemy_detail_overlay = EnemyDetailOverlay()
+        self.enemy_detail_overlay.opacity = 0
+        self.enemy_detail_overlay.disabled = True
+        # size_hint (0, 0) when hidden so it does not block clicks
+        self.enemy_detail_overlay.size_hint = (0, 0)
+        self.enemy_detail_overlay.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        main_layout.add_widget(self.enemy_detail_overlay)
         
         # Add the Perk Selection Overlay on top (hidden initially)
         self.perk_overlay = PerkSelectionOverlay(
@@ -279,21 +275,30 @@ class GameScreen(Screen):
         
         self.add_widget(main_layout)
 
-    def on_enemy_info_pressed(self, instance):
-        """Pause game and toggle enemy detail panel"""
-        if self.callback_manager:
-            self.callback_manager.on_pause(None)
-        is_hidden = self.enemy_detail_panel.opacity == 0
+    def toggle_enemy_detail_overlay(self):
+        """Toggle enemy detail overlay using Tab key, pause/unpause game like perk selection"""
+        is_hidden = self.enemy_detail_overlay.opacity == 0
         if is_hidden:
-            # Show and restore size so it appears at top-right
-            self.enemy_detail_panel.size_hint = (0.25, 0.28)
-            self.enemy_detail_panel.disabled = False
-            self.enemy_detail_panel.opacity = 1
+            # Pause the game and show overlay
+            if self.callback_manager:
+                self.callback_manager.game_state['is_paused'] = True
+            self.enemy_detail_index = 0
+            self.enemy_detail_overlay.size_hint = (0.6, 0.7)
+            self.enemy_detail_overlay.disabled = False
+            self.enemy_detail_overlay.opacity = 1
         else:
-            # Hide and shrink so it no longer intercepts clicks
-            self.enemy_detail_panel.opacity = 0
-            self.enemy_detail_panel.disabled = True
-            self.enemy_detail_panel.size_hint = (0, 0)
+            # Hide overlay and resume game
+            self.enemy_detail_overlay.opacity = 0
+            self.enemy_detail_overlay.disabled = True
+            self.enemy_detail_overlay.size_hint = (0, 0)
+            if self.callback_manager:
+                self.callback_manager.game_state['is_paused'] = False
+
+    def set_enemy_detail_index(self, index):
+        """Select which enemy (by index) the detail overlay should show"""
+        if index < 0:
+            index = 0
+        self.enemy_detail_index = index
 
     def update_enemy_widgets(self, enemies_stats):
         """Update the enemy widgets list based on current enemy stats"""
@@ -459,93 +464,91 @@ class EnemyDisplay(BoxLayout):
         self.enemy_hp_bar.max = max_hp
 
 
-class EnemyDetailPanel(BoxLayout):
-    """Detailed enemy info panel (top-right, separate from list widgets)"""
+class EnemyDetailOverlay(BoxLayout):
+    """Centered overlay for showing an Enemy Codex (enemy types list)."""
     def __init__(self, **kwargs):
-        super(EnemyDetailPanel, self).__init__(**kwargs)
+        super(EnemyDetailOverlay, self).__init__(**kwargs)
         self.orientation = 'vertical'
-        self.padding = 8
-        self.spacing = 4
-        self.size_hint = (0.25, 0.28)
-        self.pos_hint = {'right': 1, 'top': 1}
+        self.padding = 20
+        self.spacing = 10
+        self.size_hint = (0.6, 0.7)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+
+        # Background color to dim the screen
+        from kivy.graphics import Color, Rectangle
+        with self.canvas.before:
+            Color(0, 0, 0, 0.9) # dark semi-transparent black
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+        self.bind(size=self._update_rect, pos=self._update_rect)
 
         title = Label(
-            text='[b]ENEMY DETAIL[/b]',
+            text='[b]ENEMY CODEX[/b]',
             markup=True,
-            font_size='16sp',
-            size_hint_y=None,
-            height=24
+            font_size='24sp',
+            size_hint_y=0.1
         )
         self.add_widget(title)
 
-        self.name_label = Label(
-            text='Name: -',
-            font_size='14sp',
+        # Scrollable list of enemy types
+        self.scroll_view = ScrollView(size_hint_y=0.9)
+        self.codex_list = BoxLayout(
+            orientation='vertical',
             size_hint_y=None,
-            height=22
+            padding=10,
+            spacing=10
         )
-        self.hp_label = Label(
-            text='HP: 0/0',
-            font_size='14sp',
-            size_hint_y=None,
-            height=22
-        )
-        self.damage_label = Label(
-            text='Damage: 0',
-            font_size='14sp',
-            size_hint_y=None,
-            height=22
-        )
-        self.speed_label = Label(
-            text='Speed: 0',
-            font_size='14sp',
-            size_hint_y=None,
-            height=22
-        )
-        self.scale_time_label = Label(
-            text='Time: 00:00',
-            font_size='14sp',
-            size_hint_y=None,
-            height=22
-        )
+        self.codex_list.bind(minimum_height=self.codex_list.setter('height'))
+        self.scroll_view.add_widget(self.codex_list)
+        self.add_widget(self.scroll_view)
 
-        for lbl in [
-            self.name_label,
-            self.hp_label,
-            self.damage_label,
-            self.speed_label,
-            self.scale_time_label,
-        ]:
-            self.add_widget(lbl)
+        # Initialize with known enemy types (Static list for Codex)
+        self._populate_codex()
 
-    def update_info(self, enemy_stats_list, time_state):
-        """Update panel from full enemy list and time state"""
-        enemy = enemy_stats_list[0] if enemy_stats_list else None
-        if not enemy:
-            self.name_label.text = 'Name: -'
-            self.hp_label.text = 'HP: 0/0'
-            self.damage_label.text = 'Damage: 0'
-            self.speed_label.text = 'Speed: 0'
-            if time_state and 'formatted_time' in time_state:
-                self.scale_time_label.text = f"Time: {time_state['formatted_time']}"
-            else:
-                self.scale_time_label.text = 'Time: 00:00'
-            return
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
 
-        name = enemy.get('name', '-')
-        hp = enemy.get('hp', 0)
-        max_hp = enemy.get('max_hp', 0)
-        attack = enemy.get('attack', 0)
-        speed = enemy.get('speed', 0)
+    def _populate_codex(self):
+        """Populate the codex with known enemy types."""
+        enemy_types = [
+            {'name': 'Goblin', 'hp': 25, 'attack': 5, 'speed': 4, 'desc': 'A basic melee attacker.'},
+            {'name': 'Orc', 'hp': 55, 'attack': 10, 'speed': 3, 'desc': 'A stronger, slower melee attacker.'},
+            {'name': 'Skeleton', 'hp': 33, 'attack': 7, 'speed': 4, 'desc': 'A standard enemy type.'},
+            {'name': 'Normal', 'hp': 10, 'attack': 10, 'speed': 4, 'desc': 'Standard red enemy.'},
+            {'name': 'Tank', 'hp': 20, 'attack': 10, 'speed': 3, 'desc': 'Orange enemy with more HP.'},
+            {'name': 'Shooter', 'hp': 10, 'attack': 10, 'speed': 4, 'desc': 'Purple enemy that fires projectiles.'},
+            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'desc': 'A mighty Boss that spawns every 5 minutes.'}
+        ]
 
-        self.name_label.text = f'Name: {name}'
-        self.hp_label.text = f'HP: {hp}/{max_hp}'
-        self.damage_label.text = f'Damage: {attack}'
-        self.speed_label.text = f'Speed: {speed}'
-        if time_state and 'formatted_time' in time_state:
-            self.scale_time_label.text = f"Time: {time_state['formatted_time']}"
-        else:
-            self.scale_time_label.text = 'Time: 00:00'
+        for enemy in enemy_types:
+            entry = BoxLayout(orientation='vertical', size_hint_y=None, height=100, padding=5)
+            
+            # Simple border
+            from kivy.graphics import Line
+            with entry.canvas.before:
+                Color(0.2, 0.2, 0.2, 1)
+                entry.bg_rect = Rectangle(size=entry.size, pos=entry.pos)
+            entry.bind(size=self._update_entry_bg, pos=self._update_entry_bg)
+
+            name_lbl = Label(text=f"[b]{enemy['name']}[/b]", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
+            name_lbl.bind(size=name_lbl.setter('text_size'))
+            stats_lbl = Label(text=f"HP: {enemy['hp']} | Attack: {enemy['attack']} | Speed: {enemy['speed']}", font_size='14sp', size_hint_y=0.3, halign='left')
+            stats_lbl.bind(size=stats_lbl.setter('text_size'))
+            desc_lbl = Label(text=f"[i]{enemy['desc']}[/i]", markup=True, font_size='14sp', size_hint_y=0.4, halign='left')
+            desc_lbl.bind(size=desc_lbl.setter('text_size'))
+
+            entry.add_widget(name_lbl)
+            entry.add_widget(stats_lbl)
+            entry.add_widget(desc_lbl)
+            self.codex_list.add_widget(entry)
+
+    def _update_entry_bg(self, instance, value):
+        instance.bg_rect.pos = instance.pos
+        instance.bg_rect.size = instance.size
+
+    def update_from_enemy(self, enemy_stats_list, selected_index=0):
+        """No longer used for dynamic updates, purely static codex now."""
+        pass
 
 
 class CombatLog(ScrollView):
