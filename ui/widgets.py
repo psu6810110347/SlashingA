@@ -158,6 +158,19 @@ class GameScreen(Screen):
         self.stat_panel.add_widget(self.side_atk_label)
         self.stat_panel.add_widget(self.side_def_label)
         self.stat_panel.add_widget(self.side_spd_label)
+
+        # Extra information/placeholder widgets to increase actual widget count
+        # and provide future slots for displaying additional stats or perks.
+        self.perk_slot_labels = []
+        for i in range(1, 16):
+            slot_label = Label(
+                text=f'Perk Slot {i}: Empty',
+                font_size='12sp',
+                size_hint_y=None,
+                height=18
+            )
+            self.perk_slot_labels.append(slot_label)
+            self.stat_panel.add_widget(slot_label)
         
         # Push stats to the top of the left column
         self.stat_panel.add_widget(Label(size_hint_y=1))
