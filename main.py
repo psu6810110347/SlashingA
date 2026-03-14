@@ -143,6 +143,9 @@ class HackAndSlashApp(App):
             game_screen.side_atk_label.text = f"Attack: {stats['attack']}"
             game_screen.side_def_label.text = f"Defense: {stats['defense']}"
             game_screen.side_spd_label.text = f"Speed: {stats['speed']}"
+
+        if 'enemy_stats' in state and hasattr(game_screen, 'update_enemy_widgets'):
+            game_screen.update_enemy_widgets(state['enemy_stats'])
         
         if 'time_state' in state and state['time_state']:
             game_screen.time_label.text = f"Time: {state['time_state']['formatted_time']}"

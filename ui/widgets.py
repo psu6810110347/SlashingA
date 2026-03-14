@@ -171,6 +171,26 @@ class GameScreen(Screen):
             )
             self.perk_slot_labels.append(slot_label)
             self.stat_panel.add_widget(slot_label)
+
+        enemy_section_title = Label(
+            text='[b]ENEMIES[/b]',
+            markup=True,
+            font_size='14sp',
+            size_hint_y=None,
+            height=24
+        )
+        self.stat_panel.add_widget(enemy_section_title)
+
+        enemy_scroll = ScrollView(size_hint_y=0.4)
+        self.enemy_list = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            padding=2,
+            spacing=2
+        )
+        self.enemy_list.bind(minimum_height=self.enemy_list.setter('height'))
+        enemy_scroll.add_widget(self.enemy_list)
+        self.stat_panel.add_widget(enemy_scroll)
         
         # Push stats to the top of the left column
         self.stat_panel.add_widget(Label(size_hint_y=1))
@@ -214,6 +234,19 @@ class GameScreen(Screen):
         main_layout.add_widget(self.perk_overlay)
         
         self.add_widget(main_layout)
+
+    def update_enemy_widgets(self, enemies_stats):
+        """Update the enemy widgets list based on current enemy stats"""
+        if not hasattr(self, 'enemy_list'):
+            return
+        self.enemy_list.clear_widgets()
+        for stats in enemies_stats or []:
+            name = stats.get('name', 'Enemy')
+            hp = stats.get('hp', 0)
+            max_hp = stats.get('max_hp', 0)
+            enemy_widget = EnemyDisplay(size_hint_y=None, height=40)
+            enemy_widget.set_enemy(name, hp, max_hp)
+            self.enemy_list.add_widget(enemy_widget)
 
 
 class PauseMenuPopup(Popup):
