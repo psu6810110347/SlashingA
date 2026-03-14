@@ -524,7 +524,7 @@ class EnemyDetailOverlay(BoxLayout):
             entry = BoxLayout(orientation='vertical', size_hint_y=None, height=100, padding=5)
             
             # Simple border
-            from kivy.graphics import Line
+            from kivy.graphics import Color, Rectangle
             with entry.canvas.before:
                 Color(0.2, 0.2, 0.2, 1)
                 entry.bg_rect = Rectangle(size=entry.size, pos=entry.pos)
