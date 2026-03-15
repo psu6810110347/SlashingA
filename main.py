@@ -7,7 +7,7 @@ from kivy.app import App
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.core.window import Window
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, Ellipse
 
 from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup
 from events.callbacks import CallbackManager
@@ -320,38 +320,13 @@ class HackAndSlashApp(App):
         with game_screen.game_canvas.canvas:
             
             # Draw and Check Perks
-            if 'active_perks' in state and state['active_perks']:
-                perks_copy = state['active_perks'][:] # iterate over a copy so we can remove
-                for perk in perks_copy:
-                    px, py = perk['pos']
-                    if perk['type'] == 'generic':
-                        Color(1.0, 1.0, 1.0, 1)  # White Orb
-                    elif perk['type'] == 'max_hp':
-                        Color(0.2, 1.0, 0.2, 1)  # Green Orb for HP
-                    elif perk['type'] == 'speed':
-                        Color(0.2, 0.2, 1.0, 1)  # Blue Orb for Speed
-                    elif perk['type'] == 'attack':
-                        Color(1.0, 0.2, 0.2, 1)  # Red Orb for Attack
-                    elif perk['type'] == 'defense':
-                        Color(0.2, 1.0, 1.0, 1)  # Cyan Orb for Defense
-                    else:
-                        Color(1.0, 1.0, 1.0, 1)
-                    Rectangle(pos=(px, py), size=(perk['size'][0], perk['size'][1]))
-                    
-                    # Collision check
-                    player_x, player_y = self.game_manager.player.position
-                    dist = ((player_x - px)**2 + (player_y - py)**2)**0.5
-                    if dist < 25:
-                        self.game_manager.active_perks.remove(perk)
-                        self.callback_manager.game_state['is_paused'] = True
-                        
             game_screen = self.screen_manager.get_screen('game')
             world_canvas = game_screen.game_world.canvas
             
-            # Clear before context block to avoid pop_state IndexError
+            # Clear must be outside context to avoid pop_state IndexError
             world_canvas.clear()
             with world_canvas:
-                # Draw Tiled Background (Robust Grid based)
+                # 1. Background (Grid loop with overlap to fix ghosting)
                 grass_tile = "images/backgrounds/grass_tile.png"
                 if os.path.exists(grass_tile):
                     if grass_tile not in self.sprite_sheets:
@@ -361,18 +336,16 @@ class HackAndSlashApp(App):
                     
                     tex = self.sprite_sheets[grass_tile]
                     Color(1, 1, 1, 1)
-                    # Manually tile the floor (robust grid)
-                    for x in range(0, Window.width, 64):
-                        for y in range(0, Window.height, 64):
-                            # Add 1px overlap to prevent hairline/ghosting gaps
-                            Rectangle(texture=tex, pos=(x, y), size=(65, 65))
+                    # Manually tile the floor (20x12 grid)
+                    for tx in range(0, Window.width + 64, 64):
+                        for ty in range(0, Window.height + 64, 64):
+                            Rectangle(texture=tex, pos=(tx, ty), size=(65, 65))
                 else:
                     Color(0.12, 0.28, 0.12, 1)
                     Rectangle(pos=(0, 0), size=(Window.width, Window.height))
 
-                # Draw Decorations
+                # 2. Decorations
                 if hasattr(self.game_manager, 'decorations'):
-                    Color(1, 1, 1, 1)
                     for deco in self.game_manager.decorations:
                         dtype = deco['type']
                         if 'tree' in dtype: path = "images/decorations/tree.png"
@@ -382,109 +355,118 @@ class HackAndSlashApp(App):
                         if path not in self.sprite_sheets:
                             try:
                                 t = CoreImage(path).texture
-                                if t: self.sprite_sheets[path] = SpriteSheet(path, frame_size=t.height)
-                            except: self.sprite_sheets[path] = SpriteSheet(path)
+                                h = t.height
+                                # Detect frame size based on standard Tiny Swords units (192, 256, 128)
+                                frame_w = h
+                                if t.width % 192 == 0 and t.height > 100: frame_w = 192
+                                elif t.width % 256 == 0 and t.height > 100: frame_w = 256
+                                
+                                self.sprite_sheets[path] = SpriteSheet(path, frame_size=frame_w, cols=max(1, int(t.width/frame_w)))
+                            except:
+                                self.sprite_sheets[path] = SpriteSheet(path)
                         
                         sheet = self.sprite_sheets.get(path)
                         if sheet and sheet.texture:
+                            Color(1, 1, 1, 1)
                             tex_coords = sheet.get_tex_coords(0)
                             Rectangle(texture=sheet.texture, tex_coords=tex_coords,
                                       pos=deco['pos'], size=deco['size'])
                         else:
-                            Color(0.2, 0.3, 0.2, 1)
+                            Color(0.2, 0.3, 0.2, 0.6)
                             Rectangle(pos=deco['pos'], size=deco['size'])
-                            Color(1, 1, 1, 1)
 
-            # Draw Player
-            if state['player_stats']:
-                pos = self.game_manager.player.position
-                # Tiny Swords Free Pack uses separate files per action
-                action = "idle"
-                if self.pressed_keys: action = "run"
-                if len(self.active_attacks) > 0: action = "attack"
-                
-                player_anim_path = f"images/player/{action}.png"
-                
-                if player_anim_path not in self.sprite_sheets:
-                    self.sprite_sheets[player_anim_path] = SpriteSheet(player_anim_path)
-                
-                sheet = self.sprite_sheets[player_anim_path]
-                if sheet.texture:
-                    tex_coords = sheet.get_tex_coords(self._current_frame)
-                    Color(1, 1, 1, 1)
-                    Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
-                              pos=(pos[0]-125, pos[1]-125), size=(250, 250)) # Massive player sprite
-                else:
-                    Color(0.2, 0.6, 1.0, 1)
-                    Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
-                
-            # Draw Enemies
-            for enemy in self.game_manager.enemies:
-                if enemy.is_alive:
-                    e_pos = enemy.position
-                    e_name = enemy.name
-                    
-                    if e_name == "Boss":
-                        action = "run"
-                        e_sheet_path = f"images/enemy/boss_{action}.png"
-                    else:
-                        e_sheet_path = f"images/enemy/{e_name.lower()}.png"
-                        if not os.path.exists(e_sheet_path):
-                            # Default all remaining normal enemies to use Orc sprite
-                            e_sheet_path = "images/enemy/orc.png"
+                # 3. Perk Orbs (Golden & Detected)
+                if 'active_perks' in state:
+                    for perk in state['active_perks']:
+                        # Suble Golden Glow
+                        Color(1, 0.9, 0.1, 0.4)
+                        Ellipse(pos=(perk['pos'][0]-15, perk['pos'][1]-15), size=(30, 30))
+                        # Golden Center
+                        Color(1, 0.9, 0.1, 1)
+                        Ellipse(pos=(perk['pos'][0]-10, perk['pos'][1]-10), size=(20, 20))
+                        
+                        # TRIGGER detection: Proximity to player
+                        ppos = self.game_manager.player.position
+                        dist = ((ppos[0]-perk['pos'][0])**2 + (ppos[1]-perk['pos'][1])**2)**0.5
+                        if dist < 40 and not self.callback_manager.game_state['is_paused']:
+                            # Handle collection
+                            self.game_manager.active_perks.remove(perk)
+                            game_screen.perk_overlay.opacity = 1
+                            game_screen.perk_overlay.disabled = False
+                            self.callback_manager.game_state['is_paused'] = True
+                            self.game_manager.add_log("A Perk Orb has been collected!")
 
-                    
-                    if e_sheet_path not in self.sprite_sheets:
-                        if "orc" in e_name.lower() or "orc" in e_sheet_path:
-                            self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=100, cols=6)
-                        elif "boss" in e_name.lower():
-                            self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=128, cols=6)
-                        else:
-                            # Try to auto-detect frame size from height
-                            try:
-                                temp_tex = CoreImage(e_sheet_path).texture
-                                if temp_tex:
-                                    self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=temp_tex.height)
-                            except:
-                                self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path)
-                    
-                    sheet = self.sprite_sheets.get(e_sheet_path)
-                    if sheet and sheet.texture:
+                # 4. Draw Player
+                if state['player_stats']:
+                    pos = self.game_manager.player.position
+                    action = "idle"
+                    if self.pressed_keys: action = "run"
+                    if len(self.active_attacks) > 0: action = "attack"
+                    player_anim_path = f"images/player/{action}.png"
+                    if player_anim_path not in self.sprite_sheets:
+                        self.sprite_sheets[player_anim_path] = SpriteSheet(player_anim_path)
+                    sheet = self.sprite_sheets[player_anim_path]
+                    if sheet.texture:
                         tex_coords = sheet.get_tex_coords(self._current_frame)
                         Color(1, 1, 1, 1)
-                        e_size = (220, 220) # Gigantic enemy sprites
-                        if e_name == "Boss": e_size = (600, 600) # Gigantic skeleton boss
-                        
                         Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
-                                  pos=(e_pos[0] - e_size[0]/2, e_pos[1] - e_size[1]/2), size=e_size)
+                                  pos=(pos[0]-125, pos[1]-125), size=(250, 250))
                     else:
-                        # Fallback shapes (larger and centered)
-                        if e_name == "Tank": Color(0.8, 0.4, 0.0, 1)
-                        elif e_name == "Shooter": Color(0.8, 0.0, 0.8, 1)
-                        elif e_name == "Boss": Color(0.6, 0.0, 0.0, 1)
-                        else: Color(0.8, 0.2, 0.2, 1)
-                        Rectangle(pos=(e_pos[0]-25, e_pos[1]-25), size=(50, 50))
+                        Color(0.2, 0.6, 1.0, 1)
+                        Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
+                    
+                # 5. Draw Enemies
+                for enemy in self.game_manager.enemies:
+                    if enemy.is_alive:
+                        e_pos = enemy.position
+                        e_name = enemy.name
+                        if e_name == "Boss": e_sheet_path = f"images/enemy/boss_run.png"
+                        else: e_sheet_path = f"images/enemy/{e_name.lower()}.png"
+                        if not os.path.exists(e_sheet_path): e_sheet_path = "images/enemy/orc.png"
 
-            
-            # Draw Attacks
-            current_time = Clock.get_time()
-            self.active_attacks = [a for a in self.active_attacks if current_time - a[2] < 0.2]
-            Color(1.0, 0.2, 0.2, 1)
-            for attack_x, attack_y, _ in self.active_attacks:
-                Rectangle(pos=(attack_x - 10, attack_y - 10), size=(20, 20))
-                
-            # Draw Projectiles
-            proj_path = "images/projectiles/bullet.png"
-            if os.path.exists(proj_path):
-                Color(1, 1, 1, 1)
-                if 'active_projectiles' in state:
-                    for p in state['active_projectiles']:
-                        Rectangle(source=proj_path, pos=(p['pos'][0] - 10, p['pos'][1] - 10), size=(20, 20))
-            else:
-                Color(1.0, 1.0, 0.0, 1)
-                if 'active_projectiles' in state:
-                    for p in state['active_projectiles']:
-                        Rectangle(pos=(p['pos'][0] - 5, p['pos'][1] - 5), size=(10, 10))
+                        if e_sheet_path not in self.sprite_sheets:
+                            if "orc" in e_name.lower() or "orc" in e_sheet_path:
+                                self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=100, cols=6)
+                            elif "boss" in e_name.lower():
+                                self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=128, cols=6)
+                            else:
+                                try:
+                                    temp_tex = CoreImage(e_sheet_path).texture
+                                    if temp_tex: self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=temp_tex.height)
+                                except: self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path)
+                        
+                        sheet = self.sprite_sheets.get(e_sheet_path)
+                        if sheet and sheet.texture:
+                            tex_coords = sheet.get_tex_coords(self._current_frame)
+                            Color(1, 1, 1, 1)
+                            e_size = (600, 600) if e_name == "Boss" else (220, 220)
+                            Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
+                                      pos=(e_pos[0] - e_size[0]/2, e_pos[1] - e_size[1]/2), size=e_size)
+                        else:
+                            if e_name == "Tank": Color(0.8, 0.4, 0.0, 1)
+                            elif e_name == "Shooter": Color(0.8, 0.0, 0.8, 1)
+                            elif e_name == "Boss": Color(0.6, 0.0, 0.0, 1)
+                            else: Color(0.8, 0.2, 0.2, 1)
+                            Rectangle(pos=(e_pos[0]-25, e_pos[1]-25), size=(50, 50))
+
+                # 6. Draw Attacks & Projectiles
+                current_time = Clock.get_time()
+                self.active_attacks = [a for a in self.active_attacks if current_time - a[2] < 0.2]
+                Color(1.0, 0.2, 0.2, 1)
+                for attack_x, attack_y, _ in self.active_attacks:
+                    Rectangle(pos=(attack_x - 10, attack_y - 10), size=(20, 20))
+                    
+                proj_path = "images/projectiles/bullet.png"
+                if os.path.exists(proj_path):
+                    Color(1, 1, 1, 1)
+                    if 'active_projectiles' in state:
+                        for p in state['active_projectiles']:
+                            Rectangle(source=proj_path, pos=(p['pos'][0] - 10, p['pos'][1] - 10), size=(20, 20))
+                else:
+                    Color(1.0, 1.0, 0.0, 1)
+                    if 'active_projectiles' in state:
+                        for p in state['active_projectiles']:
+                            Rectangle(pos=(p['pos'][0] - 5, p['pos'][1] - 5), size=(10, 10))
 
     
     def toggle_pause_menu(self):

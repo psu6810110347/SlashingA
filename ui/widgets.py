@@ -93,11 +93,6 @@ class GameScreen(Screen):
         self.game_world = Widget(size_hint=(1, 1))
         main_layout.add_widget(self.game_world)
         
-        # Dedicated game world layer (Bottom-most)
-        from kivy.uix.widget import Widget
-        self.game_world = Widget(size_hint=(1, 1))
-        main_layout.add_widget(self.game_world)
-        
         # Track which enemy index is focused in the detail overlay
         self.enemy_detail_index = 0
         
