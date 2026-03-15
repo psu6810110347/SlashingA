@@ -193,14 +193,16 @@ class GameManager:
         for enemy in self.enemies:
             ex, ey = enemy.position
             dx = ex - px
-            dist = (dx**2 + (py - ey)**2)**0.5
+            dy = ey - py
+            dist = (dx**2 + dy**2)**0.5
             
             # Distance check
             if dist <= self.player.attack_range:
-                # Directional check: enemy must be on the side the player is facing
-                # If facing right, dx should be positive. If facing left, dx should be negative.
-                # We allow a small margin (e.g. 5px) to avoid being too strict on vertical overlap
-                is_in_front = (is_facing_right and dx > -10) or (not is_facing_right and dx < 10)
+                # Directional check: enemy must be in a forward 180-degree arc
+                # If facing right, dx should be positive (or slightly behind for the back of the swing).
+                # If facing left, dx should be negative.
+                # We allow a much more generous arc (-30px) to simulate a wide sword slash
+                is_in_front = (is_facing_right and dx > -30) or (not is_facing_right and dx < 30)
                 
                 if is_in_front and dist < min_dist:
                     min_dist = dist
@@ -381,8 +383,8 @@ class GameManager:
             self.add_log("Survived 5 minutes! +100 Score!")
             self.last_score_interval = score_intervals
             
-        # Check for Boss Spawn (Every 10 waves)
-        if self.wave_number > 0 and self.wave_number % 10 == 0:
+        # Check for Boss Spawn (Every 2 waves)
+        if self.wave_number > 0 and self.wave_number % 2 == 0:
             # Only spawn boss once per wave milestone
             if not getattr(self, '_boss_spawned_this_wave', False):
                 if self.callback_manager and self.callback_manager.app and self.callback_manager.app.root:
