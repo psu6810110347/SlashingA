@@ -292,8 +292,8 @@ class HackAndSlashApp(App):
                     dx, dy = px - ex, py - ey
                     dist = (dx**2 + dy**2)**0.5
                     
-                    # Stop moving if close enough to player
-                    if dist > 40:
+                    # Stop moving if close enough to player (at attack range)
+                    if dist > e.attack_range * 0.8: # Close in slightly more than max attack range
                         dx /= dist
                         dy /= dist
                         move_speed = getattr(e, 'speed', 3) * 20
@@ -311,7 +311,7 @@ class HackAndSlashApp(App):
                 px, py = self.game_manager.player.position
                 dist = ((p['pos'][0] - px)**2 + (p['pos'][1] - py)**2)**0.5
                 
-                if dist < 20: # Hit player
+                if dist < self.game_manager.player.hitbox_radius: # Hit player
                     actual_damage = self.game_manager.player.take_damage(p['damage'])
                     self.game_manager.add_log(f"Projectile hit you for {actual_damage} damage!")
                     self.callback_manager.on_enemy_attack(actual_damage, "Projectile")
@@ -397,7 +397,7 @@ class HackAndSlashApp(App):
                         # TRIGGER detection: Proximity to player
                         ppos = self.game_manager.player.position
                         dist = ((ppos[0]-perk['pos'][0])**2 + (ppos[1]-perk['pos'][1])**2)**0.5
-                        if dist < 40 and not self.callback_manager.game_state['is_paused']:
+                        if dist < self.game_manager.player.collection_radius and not self.callback_manager.game_state['is_paused']:
                             # Handle collection
                             self.game_manager.active_perks.remove(perk)
                             game_screen.perk_overlay.opacity = 1

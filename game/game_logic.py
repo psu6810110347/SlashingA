@@ -193,7 +193,7 @@ class GameManager:
         for enemy in self.enemies:
             ex, ey = enemy.position
             dist = ((px - ex)**2 + (py - ey)**2)**0.5
-            if dist < min_dist and dist <= 60:
+            if dist < min_dist and dist <= self.player.attack_range:
                 min_dist = dist
                 closest_enemy = enemy
                 
@@ -227,7 +227,7 @@ class GameManager:
         for enemy in self.enemies:
             ex, ey = enemy.position
             dist = ((px - ex)**2 + (py - ey)**2)**0.5
-            if dist <= 100: # Wider AOE range
+            if dist <= self.player.attack_range * 1.5: # Wider AOE range
                 hit_enemies.append(enemy)
                 
         for enemy in hit_enemies:
@@ -289,8 +289,8 @@ class GameManager:
                 px, py = self.player.position
                 dist = ((px - ex)**2 + (py - ey)**2)**0.5
                 
-                # Melee range is around 50 pixels
-                if dist < 50:
+                # Melee range is specific to enemy type
+                if dist < enemy.attack_range:
                     enemy.last_shot_time = current_time
                     damage = enemy.attack_player()
                     actual_damage = self.player.take_damage(damage)

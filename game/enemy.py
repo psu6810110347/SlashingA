@@ -22,6 +22,10 @@ class Enemy:
         self.loot = []
         self.position = [0, 0]
         self.is_alive = True
+        
+        # Hitbox and Ranges (default)
+        self.hitbox_radius = 50
+        self.attack_range = 80
     
     def take_damage(self, damage):
         """Take damage"""
@@ -57,6 +61,8 @@ class Enemy:
             'defense': self.defense,
             'speed': getattr(self, 'speed', 0),
             'pos': self.position,
+            'hitbox_radius': self.hitbox_radius,
+            'attack_range': self.attack_range,
         }
 
 
@@ -68,6 +74,8 @@ class NormalEnemy(Enemy):
         self.max_hp = self.hp
         self.attack = 10 + (scaling_factor * 5)
         self.speed = 4
+        self.hitbox_radius = 50
+        self.attack_range = 80
 
 
 class TankEnemy(Enemy):
@@ -78,6 +86,8 @@ class TankEnemy(Enemy):
         self.max_hp = self.hp
         self.attack = 10 + (scaling_factor * 5)
         self.speed = 3
+        self.hitbox_radius = 100 # Large tank
+        self.attack_range = 90
 
 
 class ShooterEnemy(Enemy):
@@ -89,6 +99,8 @@ class ShooterEnemy(Enemy):
         self.attack = 10 + (scaling_factor * 5)
         self.speed = 4
         self.last_shot_time = 0
+        self.hitbox_radius = 50
+        self.attack_range = 300 # Archer range
 
 
 class Boss(Enemy):
@@ -102,3 +114,5 @@ class Boss(Enemy):
         self.speed = 2
         self.exp_reward = 500 + (scaling_factor * 100)
         self.gold_reward = 100 + (scaling_factor * 50)
+        self.hitbox_radius = 180 # Massive boss
+        self.attack_range = 150
