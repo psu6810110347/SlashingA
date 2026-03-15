@@ -80,6 +80,22 @@ class HackAndSlashApp(App):
         elif codepoint == 'p':  # P key
             self.callback_manager.on_pause(None)
             return True
+        # Use TAB key (keycode 9) to toggle enemy detail like a pause overlay
+        elif key == 9:  # Tab key
+            if self.screen_manager.current == 'game':
+                game_screen = self.screen_manager.get_screen('game')
+                if hasattr(game_screen, 'toggle_enemy_detail_overlay'):
+                    game_screen.toggle_enemy_detail_overlay()
+                    return True
+        # Number keys 1-9: change which enemy is shown in detail overlay
+        elif codepoint in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
+            if self.screen_manager.current == 'game':
+                game_screen = self.screen_manager.get_screen('game')
+                if hasattr(game_screen, 'enemy_detail_overlay') and game_screen.enemy_detail_overlay.opacity == 1:
+                    index = int(codepoint) - 1  # 1 -> 0, 2 -> 1, ...
+                    if hasattr(game_screen, 'set_enemy_detail_index'):
+                        game_screen.set_enemy_detail_index(index)
+                    return True
         return False
         
     def on_key_up(self, window, key, scancode):
@@ -143,6 +159,33 @@ class HackAndSlashApp(App):
             game_screen.side_atk_label.text = f"Attack: {stats['attack']}"
             game_screen.side_def_label.text = f"Defense: {stats['defense']}"
             game_screen.side_spd_label.text = f"Speed: {stats['speed']}"
+
+        enemies_stats = state.get('enemy_stats', [])
+        if hasattr(game_screen, 'update_enemy_widgets'):
+            game_screen.update_enemy_widgets(enemies_stats)
+
+        # Update top-right enemy detail overlay (HP/damage/speed, no time label).
+        # Uses GameScreen.enemy_detail_index so pressing 1-9 changes which enemy you see.
+        if hasattr(game_screen, 'enemy_detail_overlay'):
+            selected_index = getattr(game_screen, 'enemy_detail_index', 0)
+            game_screen.enemy_detail_overlay.update_from_enemy(enemies_stats, selected_index)
+
+        # Update boss HP widget (shows boss if present, otherwise hidden/empty)
+        if hasattr(game_screen, 'boss_hp_bar') and hasattr(game_screen, 'boss_hp_label'):
+            boss_stats = next((e for e in enemies_stats if e.get('name') == 'Boss'), None)
+            if boss_stats:
+                hp = boss_stats.get('hp', 0)
+                max_hp = boss_stats.get('max_hp', 0) or 1
+                game_screen.boss_hp_bar.max = max_hp
+                game_screen.boss_hp_bar.value = hp
+                game_screen.boss_hp_label.text = f"Boss: {hp}/{max_hp}"
+                game_screen.boss_hp_bar.opacity = 1
+                game_screen.boss_hp_label.opacity = 1
+            else:
+                game_screen.boss_hp_bar.value = 0
+                game_screen.boss_hp_bar.opacity = 0
+                game_screen.boss_hp_label.text = "Boss: None"
+                game_screen.boss_hp_label.opacity = 0.6
         
         if 'time_state' in state and state['time_state']:
             game_screen.time_label.text = f"Time: {state['time_state']['formatted_time']}"

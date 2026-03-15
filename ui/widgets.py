@@ -88,6 +88,9 @@ class GameScreen(Screen):
         # Create main layout (FloatLayout to allow overlaying)
         main_layout = FloatLayout()
         
+        # Track which enemy index is focused in the detail overlay
+        self.enemy_detail_index = 0
+        
         # Content layout (The actual game contents)
         content_layout = BoxLayout(
             orientation='vertical',
@@ -99,23 +102,26 @@ class GameScreen(Screen):
         
         # Top HUD bar
         hud = BoxLayout(
-            size_hint_y=0.1,
-            spacing=10,
+            orientation='vertical',
+            size_hint_y=0.16,
+            spacing=4,
             padding=5
+        )
+
+        # First row: basic stats + enemy detail button (top-right)
+        top_row = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=0.5,
+            spacing=10
         )
         
         # Player stats labels (Removed HP from top)
         self.level_label = Label(
             text='Level: 1',
             font_size='18sp',
-            size_hint_x=0.33
+            size_hint_x=0.3
         )
         
-        score_label = Label(
-            text='Score: 0',
-            font_size='16sp',
-            size_hint_y=0.1
-        )
         self.score_label = Label(
             text='Score: 0',
             font_size='16sp',
@@ -126,11 +132,36 @@ class GameScreen(Screen):
             font_size='16sp',
             size_hint_y=0.1
         )
-        
-        hud.add_widget(self.level_label)
-        hud.add_widget(self.score_label)
-        hud.add_widget(self.time_label)
-        
+
+        top_row.add_widget(self.level_label)
+        top_row.add_widget(self.score_label)
+        top_row.add_widget(self.time_label)
+
+        # Second row: Boss HP bar centered
+        boss_row = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=0.5,
+            padding=[80, 0, 80, 0],  # left, top, right, bottom
+            spacing=8
+        )
+
+        self.boss_hp_label = Label(
+            text='Boss: None',
+            font_size='16sp',
+            size_hint_x=0.2
+        )
+        self.boss_hp_bar = ProgressBar(
+            value=0,
+            max=100,
+            size_hint_x=0.8
+        )
+
+        boss_row.add_widget(self.boss_hp_label)
+        boss_row.add_widget(self.boss_hp_bar)
+
+        hud.add_widget(top_row)
+        hud.add_widget(boss_row)
+
         content_layout.add_widget(hud)
         
         # Lower Content Area (Left Stats + Right Game/Controls)
@@ -158,6 +189,53 @@ class GameScreen(Screen):
         self.stat_panel.add_widget(self.side_atk_label)
         self.stat_panel.add_widget(self.side_def_label)
         self.stat_panel.add_widget(self.side_spd_label)
+
+        # Perk collection tracking slots (4 types)
+        perk_section_title = Label(
+            text='[b]PERKS COLLECTED[/b]',
+            markup=True,
+            font_size='14sp',
+            size_hint_y=None,
+            height=24
+        )
+        self.stat_panel.add_widget(perk_section_title)
+
+        self.perk_slot_labels = {}
+        perk_types = [
+            ('max_hp', 'Max HP'),
+            ('speed', 'Speed'),
+            ('attack', 'Attack'),
+            ('defense', 'Defense'),
+        ]
+        for perk_id, perk_name in perk_types:
+            slot_label = Label(
+                text=f'{perk_name}: 0',
+                font_size='12sp',
+                size_hint_y=None,
+                height=18
+            )
+            self.perk_slot_labels[perk_id] = slot_label
+            self.stat_panel.add_widget(slot_label)
+
+        enemy_section_title = Label(
+            text='[b]ENEMIES[/b]',
+            markup=True,
+            font_size='14sp',
+            size_hint_y=None,
+            height=24
+        )
+        self.stat_panel.add_widget(enemy_section_title)
+
+        enemy_scroll = ScrollView(size_hint_y=0.4)
+        self.enemy_list = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            padding=2,
+            spacing=2
+        )
+        self.enemy_list.bind(minimum_height=self.enemy_list.setter('height'))
+        enemy_scroll.add_widget(self.enemy_list)
+        self.stat_panel.add_widget(enemy_scroll)
         
         # Push stats to the top of the left column
         self.stat_panel.add_widget(Label(size_hint_y=1))
@@ -189,6 +267,15 @@ class GameScreen(Screen):
         
         content_layout.add_widget(content_area)
         main_layout.add_widget(content_layout)
+
+        # Centered enemy codex overlay (controlled via keyboard Tab, not clickable)
+        self.enemy_detail_overlay = EnemyDetailOverlay()
+        self.enemy_detail_overlay.opacity = 0
+        self.enemy_detail_overlay.disabled = True
+        # size_hint (0, 0) when hidden so it does not block clicks
+        self.enemy_detail_overlay.size_hint = (0, 0)
+        self.enemy_detail_overlay.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        main_layout.add_widget(self.enemy_detail_overlay)
         
         # Add the Perk Selection Overlay on top (hidden initially)
         self.perk_overlay = PerkSelectionOverlay(
@@ -201,6 +288,44 @@ class GameScreen(Screen):
         main_layout.add_widget(self.perk_overlay)
         
         self.add_widget(main_layout)
+
+    def toggle_enemy_detail_overlay(self):
+        """Toggle enemy detail overlay using Tab key, pause/unpause game like perk selection"""
+        is_hidden = self.enemy_detail_overlay.opacity == 0
+        if is_hidden:
+            # Pause the game and show overlay
+            if self.callback_manager:
+                self.callback_manager.game_state['is_paused'] = True
+            self.enemy_detail_index = 0
+            self.enemy_detail_overlay.size_hint = (0.6, 0.7)
+            self.enemy_detail_overlay.disabled = False
+            self.enemy_detail_overlay.opacity = 1
+        else:
+            # Hide overlay and resume game
+            self.enemy_detail_overlay.opacity = 0
+            self.enemy_detail_overlay.disabled = True
+            self.enemy_detail_overlay.size_hint = (0, 0)
+            if self.callback_manager:
+                self.callback_manager.game_state['is_paused'] = False
+
+    def set_enemy_detail_index(self, index):
+        """Select which enemy (by index) the detail overlay should show"""
+        if index < 0:
+            index = 0
+        self.enemy_detail_index = index
+
+    def update_enemy_widgets(self, enemies_stats):
+        """Update the enemy widgets list based on current enemy stats"""
+        if not hasattr(self, 'enemy_list'):
+            return
+        self.enemy_list.clear_widgets()
+        for stats in enemies_stats or []:
+            name = stats.get('name', 'Enemy')
+            hp = stats.get('hp', 0)
+            max_hp = stats.get('max_hp', 0)
+            enemy_widget = EnemyDisplay(size_hint_y=None, height=40)
+            enemy_widget.set_enemy(name, hp, max_hp)
+            self.enemy_list.add_widget(enemy_widget)
 
 
 class PauseMenuPopup(Popup):
@@ -351,6 +476,100 @@ class EnemyDisplay(BoxLayout):
         self.enemy_name.text = f'Enemy: {name}'
         self.enemy_hp_bar.value = hp
         self.enemy_hp_bar.max = max_hp
+
+
+class EnemyDetailOverlay(BoxLayout):
+    """Centered overlay for showing an Enemy Codex (enemy types list)."""
+    def __init__(self, **kwargs):
+        super(EnemyDetailOverlay, self).__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.padding = 20
+        self.spacing = 10
+        self.size_hint = (0.6, 0.7)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+
+        # Background color to dim the screen
+        from kivy.graphics import Color, Rectangle
+        with self.canvas.before:
+            Color(0, 0, 0, 0.9) # dark semi-transparent black
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+        self.bind(size=self._update_rect, pos=self._update_rect)
+
+        title = Label(
+            text='[b]ENEMY CODEX[/b]',
+            markup=True,
+            font_size='24sp',
+            size_hint_y=0.1
+        )
+        self.add_widget(title)
+
+        # Scrollable list of enemy types
+        self.scroll_view = ScrollView(
+            size_hint_y=0.9,
+            do_scroll_x=False,
+            do_scroll_y=True,
+            scroll_type=['bars', 'content'],
+            bar_width=10
+        )
+        self.codex_list = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            padding=10,
+            spacing=10
+        )
+        self.codex_list.bind(minimum_height=self.codex_list.setter('height'))
+        self.scroll_view.add_widget(self.codex_list)
+        self.add_widget(self.scroll_view)
+
+        # Initialize with known enemy types (Static list for Codex)
+        self._populate_codex()
+
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+
+    def _populate_codex(self):
+        """Populate the codex with enemy types that actually appear in the game."""
+        enemy_types = [
+            {'name': 'Normal', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Red',
+             'desc': 'A standard red enemy. Fast and aggressive melee attacker.'},
+            {'name': 'Tank', 'hp': 20, 'attack': 10, 'speed': 3, 'color': 'Orange',
+             'desc': 'An orange enemy with more HP. Slower but tougher to kill.'},
+            {'name': 'Shooter', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Purple',
+             'desc': 'A purple ranged enemy that fires yellow projectiles at you.'},
+            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'color': 'Dark Red',
+             'desc': 'A mighty Boss that spawns every 5 minutes. Very high HP and damage.'}
+        ]
+
+        for enemy in enemy_types:
+            entry = BoxLayout(orientation='vertical', size_hint_y=None, height=90, padding=5)
+            
+            # Background
+            from kivy.graphics import Color, Rectangle
+            with entry.canvas.before:
+                Color(0.15, 0.15, 0.15, 1)
+                entry.bg_rect = Rectangle(size=entry.size, pos=entry.pos)
+            entry.bind(size=self._update_entry_bg, pos=self._update_entry_bg)
+
+            name_lbl = Label(text=f"[b]{enemy['name']}[/b]  ({enemy['color']})", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
+            name_lbl.bind(size=name_lbl.setter('text_size'))
+            stats_lbl = Label(text=f"HP: {enemy['hp']}  |  Attack: {enemy['attack']}  |  Speed: {enemy['speed']}", font_size='14sp', size_hint_y=0.3, halign='left')
+            stats_lbl.bind(size=stats_lbl.setter('text_size'))
+            desc_lbl = Label(text=f"[i]{enemy['desc']}[/i]", markup=True, font_size='13sp', size_hint_y=0.4, halign='left')
+            desc_lbl.bind(size=desc_lbl.setter('text_size'))
+
+            entry.add_widget(name_lbl)
+            entry.add_widget(stats_lbl)
+            entry.add_widget(desc_lbl)
+            self.codex_list.add_widget(entry)
+
+    def _update_entry_bg(self, instance, value):
+        instance.bg_rect.pos = instance.pos
+        instance.bg_rect.size = instance.size
+
+    def update_from_enemy(self, enemy_stats_list, selected_index=0):
+        """No longer used for dynamic updates, purely static codex now."""
+        pass
 
 
 class CombatLog(ScrollView):

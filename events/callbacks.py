@@ -25,6 +25,12 @@ class CallbackManager:
             'enemy_hp': 50,
             'enemy_max_hp': 50,
         }
+        self.perk_counts = {
+            'max_hp': 0,
+            'speed': 0,
+            'attack': 0,
+            'defense': 0,
+        }
     
     # Menu Callbacks
     def on_start_game(self, instance):
@@ -109,6 +115,14 @@ class CallbackManager:
     def on_enemy_attack(self, damage, enemy_name):
         """Callback triggered when an enemy successfully attacks the player"""
         print(f"{enemy_name} attacked for {damage} damage!")
+        
+    def on_boss_spawn(self, level):
+        """Callback triggered when a boss spawns"""
+        print(f"Boss Spawned at level {level}!")
+        
+    def on_settings(self, instance):
+        """Callback for settings button in pause menu"""
+        print("Settings menu opened")
     
     def get_game_state(self):
         """Get current game state"""
@@ -132,6 +146,17 @@ class CallbackManager:
             elif perk_id == 'defense':
                 player.defense += 1
                 self.app.game_manager.add_log("Gained +1 Defense!")
+            
+            # Update perk collection count
+            if perk_id in self.perk_counts:
+                self.perk_counts[perk_id] += 1
+            
+            # Update UI labels
+            if hasattr(self.app, 'screen_manager'):
+                game_screen = self.app.screen_manager.get_screen('game')
+                if hasattr(game_screen, 'perk_slot_labels') and perk_id in game_screen.perk_slot_labels:
+                    perk_names = {'max_hp': 'Max HP', 'speed': 'Speed', 'attack': 'Attack', 'defense': 'Defense'}
+                    game_screen.perk_slot_labels[perk_id].text = f"{perk_names[perk_id]}: {self.perk_counts[perk_id]}"
                 
         # Unpause the game and close the menu
         self.game_state['is_paused'] = False
