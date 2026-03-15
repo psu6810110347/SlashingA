@@ -504,8 +504,8 @@ class HackAndSlashApp(App):
                                 
                                 # Special override for Boss (Skeleton) if needed
                                 if "boss" in e_name.lower():
-                                    frame_w = 128
-                                    columns = 6
+                                    frame_w = h
+                                    columns = max(1, int(w / h))
                                 elif "knight" in e_sheet_path:
                                     frame_w = 192
                                     columns = 6
@@ -544,7 +544,11 @@ class HackAndSlashApp(App):
                             elif e_name == "archer": Color(0.8, 0.0, 0.8, 1)
                             elif e_name == "boss": Color(0.6, 0.0, 0.0, 1)
                             else: Color(0.8, 0.2, 0.2, 1)
-                            Rectangle(pos=(e_pos[0]-25, e_pos[1]-25), size=(50, 50))
+                            
+                            if e_name == "boss":
+                                Rectangle(pos=(e_pos[0]-100, e_pos[1]-100), size=(200, 200))
+                            else:
+                                Rectangle(pos=(e_pos[0]-25, e_pos[1]-25), size=(50, 50))
 
                 # 6. Draw Attacks (No visuals needed, just cooldown management)
                 current_time = Clock.get_time()
