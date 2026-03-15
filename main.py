@@ -345,67 +345,55 @@ class HackAndSlashApp(App):
                         self.game_manager.active_perks.remove(perk)
                         self.callback_manager.game_state['is_paused'] = True
                         
-                        # Show the hidden overlay
-                        game_screen = self.root.get_screen('game')
-                        game_screen.perk_overlay.opacity = 1
-                        game_screen.perk_overlay.disabled = False
+            game_screen = self.screen_manager.get_screen('game')
+            world_canvas = game_screen.game_world.canvas
+            
+            # Clear before context block to avoid pop_state IndexError
+            world_canvas.clear()
+            with world_canvas:
+                # Draw Tiled Background (Robust Grid based)
+                grass_tile = "images/backgrounds/grass_tile.png"
+                if os.path.exists(grass_tile):
+                    if grass_tile not in self.sprite_sheets:
+                        tex = CoreImage(grass_tile).texture
+                        tex.mag_filter = 'nearest'
+                        self.sprite_sheets[grass_tile] = tex
                     
-            # Draw Tiled Background (Grid based for stability)
-            grass_tile = "images/backgrounds/grass_tile.png"
-            if os.path.exists(grass_tile):
-                if grass_tile not in self.sprite_sheets:
-                    tex = CoreImage(grass_tile).texture
-                    tex.mag_filter = 'nearest'
-                    self.sprite_sheets[grass_tile] = tex
-                
-                tex = self.sprite_sheets[grass_tile]
-                Color(1, 1, 1, 1)
-                # Manually tile the floor (20x12 grid)
-                for x in range(0, Window.width, 64):
-                    for y in range(0, Window.height, 64):
-                        # Add a tiny overlap (+1) to prevent hairline gaps
-                        Rectangle(texture=tex, pos=(x, y), size=(65, 65))
-            else:
-                Color(0.12, 0.28, 0.12, 1) # Fallback Ground grass color
-                Rectangle(pos=(0, 0), size=(Window.width, Window.height))
+                    tex = self.sprite_sheets[grass_tile]
+                    Color(1, 1, 1, 1)
+                    # Manually tile the floor (robust grid)
+                    for x in range(0, Window.width, 64):
+                        for y in range(0, Window.height, 64):
+                            # Add 1px overlap to prevent hairline/ghosting gaps
+                            Rectangle(texture=tex, pos=(x, y), size=(65, 65))
+                else:
+                    Color(0.12, 0.28, 0.12, 1)
+                    Rectangle(pos=(0, 0), size=(Window.width, Window.height))
 
-            # Draw Decorations (Sliced scenery)
-            if hasattr(self.game_manager, 'decorations'):
-                Color(1, 1, 1, 1)
-                for deco in self.game_manager.decorations:
-                    dtype = deco['type']
-                    if 'tree' in dtype:
-                        path = "images/decorations/tree.png"
-                    elif 'bush' in dtype:
-                        idx = dtype[-1]
-                        path = f"images/decorations/bush{idx}.png"
-                    else: # rock
-                        idx = dtype[-1]
-                        path = f"images/decorations/rock{idx}.png"
+                # Draw Decorations
+                if hasattr(self.game_manager, 'decorations'):
+                    Color(1, 1, 1, 1)
+                    for deco in self.game_manager.decorations:
+                        dtype = deco['type']
+                        if 'tree' in dtype: path = "images/decorations/tree.png"
+                        elif 'bush' in dtype: path = f"images/decorations/bush{dtype[-1]}.png"
+                        else: path = f"images/decorations/rock{dtype[-1]}.png"
 
-                    if path not in self.sprite_sheets:
-                        # Adaptive sizing: Most Tiny Swords deco are sheets where cell_size = height
-                        try:
-                            temp_tex = CoreImage(path).texture
-                            if temp_tex:
-                                h = temp_tex.height
-                                self.sprite_sheets[path] = SpriteSheet(path, frame_size=h, cols=max(1, int(temp_tex.width/h)))
-                        except:
-                            self.sprite_sheets[path] = SpriteSheet(path, frame_size=64, cols=1)
-                    
-                    sheet = self.sprite_sheets.get(path)
-                    if sheet and sheet.texture:
-                        # Decorations usually single frame or first frame is fine
-                        tex_coords = sheet.get_tex_coords(0) 
-                        Rectangle(texture=sheet.texture, tex_coords=tex_coords,
-                                  pos=deco['pos'], size=deco['size'])
-                    else:
-                        # Fallback colored squares
-                        if 'bush' in dtype: Color(0.1, 0.4, 0.1, 1)
-                        elif 'tree' in dtype: Color(0.05, 0.3, 0.05, 1)
-                        else: Color(0.5, 0.5, 0.5, 1)
-                        Rectangle(pos=deco['pos'], size=deco['size'])
-                        Color(1, 1, 1, 1)
+                        if path not in self.sprite_sheets:
+                            try:
+                                t = CoreImage(path).texture
+                                if t: self.sprite_sheets[path] = SpriteSheet(path, frame_size=t.height)
+                            except: self.sprite_sheets[path] = SpriteSheet(path)
+                        
+                        sheet = self.sprite_sheets.get(path)
+                        if sheet and sheet.texture:
+                            tex_coords = sheet.get_tex_coords(0)
+                            Rectangle(texture=sheet.texture, tex_coords=tex_coords,
+                                      pos=deco['pos'], size=deco['size'])
+                        else:
+                            Color(0.2, 0.3, 0.2, 1)
+                            Rectangle(pos=deco['pos'], size=deco['size'])
+                            Color(1, 1, 1, 1)
 
             # Draw Player
             if state['player_stats']:
