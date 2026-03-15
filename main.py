@@ -47,10 +47,12 @@ class SpriteSheet:
             frame_x = frame_x % max_cols
             
         u = frame_x * u_step
-        # Kivy flips V vertically (0 is bottom)
-        v = 1.0 - (frame_y + 1) * v_step
         
-        return [u, v, u + u_step, v, u + u_step, v + v_step, u, v + v_step]
+        # Kivy vertical flip fix: Swap top and bottom V to flip Sprite 180 degrees
+        v_bottom = 1.0 - (frame_y + 1) * v_step
+        v_top = 1.0 - frame_y * v_step
+        
+        return [u, v_top, u + u_step, v_top, u + u_step, v_bottom, u, v_bottom]
 
 
 # Set window size
@@ -348,14 +350,9 @@ class HackAndSlashApp(App):
                         game_screen.perk_overlay.opacity = 1
                         game_screen.perk_overlay.disabled = False
                     
-            # Draw Background
-            ground_path = "images/backgrounds/ground.png"
-            if os.path.exists(ground_path):
-                Color(1, 1, 1, 1)
-                Rectangle(source=ground_path, pos=(0, 0), size=(Window.width, Window.height))
-            else:
-                Color(0.1, 0.1, 0.1, 1)
-                Rectangle(pos=(0, 0), size=(Window.width, Window.height))
+            # Draw Background to fill only the game canvas area
+            Color(0.12, 0.28, 0.12, 1) # Ground grass color
+            Rectangle(pos=game_screen.game_canvas.pos, size=game_screen.game_canvas.size)
 
             # Draw Player
             if state['player_stats']:
@@ -387,13 +384,14 @@ class HackAndSlashApp(App):
                     e_name = enemy.name
                     
                     if e_name == "Boss":
-                        # Lucifer Boss uses separate files
-                        # For now we'll use boss_run.png for everything simple
                         action = "run"
-                        # if enemy.is_attacking: action = "attack" # Need to track enemy state
                         e_sheet_path = f"images/enemy/boss_{action}.png"
                     else:
                         e_sheet_path = f"images/enemy/{e_name.lower()}.png"
+                        if not os.path.exists(e_sheet_path):
+                            # Default all remaining normal enemies to use Orc sprite
+                            e_sheet_path = "images/enemy/orc.png"
+
                     
                     if e_sheet_path not in self.sprite_sheets:
                         if "orc" in e_name.lower():
