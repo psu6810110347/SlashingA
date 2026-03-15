@@ -33,16 +33,21 @@ class SpriteSheet:
             except Exception as e:
                 print(f"Error loading sheet {source}: {e}")
         
-    def get_tex_coords(self, frame_x, frame_y):
-        """Calculate UV coordinates for a frame in a sheet"""
+    def get_tex_coords(self, frame_x, frame_y=0):
+        """Calculate UV coordinates for a frame in a sheet (defaults to row 0 for single-action sheets)"""
         if not self.texture:
             return None
         
         u_step = self.frame_size / self.texture.width
         v_step = self.frame_size / self.texture.height
         
-        u = (frame_x % self.cols) * u_step
-        # Kivy flips V vertically (0 is bottom), Tiny Swords/Zerie sheets are top-down
+        # Clamp frame_x to avoid overflow if sheet has fewer frames
+        max_cols = self.texture.width // self.frame_size
+        if max_cols > 0:
+            frame_x = frame_x % max_cols
+            
+        u = frame_x * u_step
+        # Kivy flips V vertically (0 is bottom)
         v = 1.0 - (frame_y + 1) * v_step
         
         return [u, v, u + u_step, v, u + u_step, v + v_step, u, v + v_step]
@@ -355,22 +360,22 @@ class HackAndSlashApp(App):
             # Draw Player
             if state['player_stats']:
                 pos = self.game_manager.player.position
-                player_sheet_path = "images/player/player.png"
+                # Tiny Swords Free Pack uses separate files per action
+                action = "idle"
+                if self.pressed_keys: action = "run"
+                if len(self.active_attacks) > 0: action = "attack"
                 
-                if player_sheet_path not in self.sprite_sheets:
-                    self.sprite_sheets[player_sheet_path] = SpriteSheet(player_sheet_path)
+                player_anim_path = f"images/player/{action}.png"
                 
-                sheet = self.sprite_sheets[player_sheet_path]
+                if player_anim_path not in self.sprite_sheets:
+                    self.sprite_sheets[player_anim_path] = SpriteSheet(player_anim_path)
+                
+                sheet = self.sprite_sheets[player_anim_path]
                 if sheet.texture:
-                    # Row selection: 0=Idle, 1=Run, 2=Attack
-                    row = 0
-                    if self.pressed_keys: row = 1
-                    if len(self.active_attacks) > 0: row = 2
-                    
-                    tex_coords = sheet.get_tex_coords(self._current_frame, row)
+                    tex_coords = sheet.get_tex_coords(self._current_frame)
                     Color(1, 1, 1, 1)
                     Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
-                              pos=(pos[0]-40, pos[1]-40), size=(100, 100))
+                              pos=(pos[0]-60, pos[1]-60), size=(150, 150)) # Scaled up for 192px sprite
                 else:
                     Color(0.2, 0.6, 1.0, 1)
                     Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
@@ -380,10 +385,17 @@ class HackAndSlashApp(App):
                 if enemy.is_alive:
                     e_pos = enemy.position
                     e_name = enemy.name
-                    e_sheet_path = f"images/enemy/{e_name.lower()}.png"
+                    
+                    if e_name == "Boss":
+                        # Lucifer Boss uses separate files
+                        # For now we'll use boss_run.png for everything simple
+                        action = "run"
+                        # if enemy.is_attacking: action = "attack" # Need to track enemy state
+                        e_sheet_path = f"images/enemy/boss_{action}.png"
+                    else:
+                        e_sheet_path = f"images/enemy/{e_name.lower()}.png"
                     
                     if e_sheet_path not in self.sprite_sheets:
-                        # Zerie Orc uses 100x100, Lucifer Boss uses approx 128x128
                         if "orc" in e_name.lower():
                             self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=100, cols=6)
                         elif "boss" in e_name.lower():
@@ -393,16 +405,11 @@ class HackAndSlashApp(App):
                     
                     sheet = self.sprite_sheets[e_sheet_path]
                     if sheet.texture:
-                        row = 1 # Running
-                        if "orc" in e_name.lower():
-                            row = 1 
-                        elif "boss" in e_name.lower():
-                            row = 1 # Skeleton boss move row
-                        
-                        tex_coords = sheet.get_tex_coords(self._current_frame, row)
+                        tex_coords = sheet.get_tex_coords(self._current_frame)
                         Color(1, 1, 1, 1)
                         e_size = (100, 100)
-                        if e_name == "Boss": e_size = (280, 280) # Make the skeleton boss look huge
+                        if e_name == "Boss": e_size = (350, 350) # Make skeleton boss massive
+                        
                         Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
                                   pos=(e_pos[0] - e_size[0]/2, e_pos[1] - e_size[1]/2), size=e_size)
                     else:
