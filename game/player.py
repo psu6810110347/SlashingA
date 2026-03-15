@@ -26,6 +26,11 @@ class Player:
         self.skills = []
         self.position = [0, 0]
         self.is_alive = True
+        
+        # Hitbox and Ranges
+        self.hitbox_radius = 45
+        self.attack_range = 100
+        self.collection_radius = 60
     
     def take_damage(self, damage):
         """Take damage"""
@@ -100,4 +105,7 @@ class Player:
             'speed': self.speed,
             'gold': self.gold,
             'score': self.score,
+            'pos': self.position,
+            'hitbox_radius': self.hitbox_radius,
+            'attack_range': self.attack_range,
         }
