@@ -383,9 +383,11 @@ class HackAndSlashApp(App):
                     e_sheet_path = f"images/enemy/{e_name.lower()}.png"
                     
                     if e_sheet_path not in self.sprite_sheets:
-                        # Zerie Orc uses 100x100 frames. Detect by filename.
+                        # Zerie Orc uses 100x100, Lucifer Boss uses approx 128x128
                         if "orc" in e_name.lower():
                             self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=100, cols=6)
+                        elif "boss" in e_name.lower():
+                            self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=128, cols=6)
                         else:
                             self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path)
                     
@@ -393,13 +395,14 @@ class HackAndSlashApp(App):
                     if sheet.texture:
                         row = 1 # Running
                         if "orc" in e_name.lower():
-                            # Zerie Orc might have different row mapping, but we'll assume row 1 for now
                             row = 1 
+                        elif "boss" in e_name.lower():
+                            row = 1 # Skeleton boss move row
                         
                         tex_coords = sheet.get_tex_coords(self._current_frame, row)
                         Color(1, 1, 1, 1)
                         e_size = (100, 100)
-                        if e_name == "Boss": e_size = (240, 240)
+                        if e_name == "Boss": e_size = (280, 280) # Make the skeleton boss look huge
                         Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
                                   pos=(e_pos[0] - e_size[0]/2, e_pos[1] - e_size[1]/2), size=e_size)
                     else:
