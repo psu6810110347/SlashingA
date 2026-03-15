@@ -309,6 +309,11 @@ class HackAndSlashApp(App):
                         move_speed = getattr(e, 'speed', 3) * 20
                         e.position[0] += dx * move_speed * dt
                         e.position[1] += dy * move_speed * dt
+                        if e.action != "attack":
+                            e.action = "run"
+                    else:
+                        if e.action != "attack":
+                            e.action = "idle"
             
             # Update Projectiles
             dt_safe = dt if dt < 0.1 else 0.016
@@ -435,13 +440,33 @@ class HackAndSlashApp(App):
                     Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
                     
                 # 5. Draw Enemies
+                # Use game's elapsed time for synchronization with game_logic
+                game_time = self.game_manager.time_manager.elapsed_time
                 for enemy in self.game_manager.enemies:
                     if enemy.is_alive:
                         e_pos = enemy.position
-                        e_name = enemy.name
-                        if e_name == "Boss": e_sheet_path = f"images/enemy/boss_run.png"
-                        else: e_sheet_path = f"images/enemy/{e_name.lower()}.png"
-                        if not os.path.exists(e_sheet_path): e_sheet_path = "images/enemy/orc.png"
+                        e_name = enemy.name.lower()
+                        
+                        # Handle action transition (attack -> run/idle)
+                        # We use 0.6s to match player attack duration for consistency
+                        if enemy.action == "attack" and game_time - enemy.action_time > 0.6:
+                            enemy.action = "run"
+                            
+                        # Select sheet based on action
+                        # Actions: run, idle, attack
+                        if e_name == "boss":
+                            prefix = f"images/enemy/boss_{enemy.action}"
+                        else:
+                            # normal, tank, shooter
+                            action_suffix = "" if enemy.action == "run" else f"_{enemy.action}"
+                            prefix = f"images/enemy/{e_name}{action_suffix}"
+                        
+                        e_sheet_path = f"{prefix}.png"
+                        if not os.path.exists(e_sheet_path): 
+                            # Fallback to run if specific action doesn't exist
+                            e_sheet_path = f"images/enemy/{e_name}.png"
+                        if not os.path.exists(e_sheet_path): 
+                            e_sheet_path = "images/enemy/orc.png"
 
                         if e_sheet_path not in self.sprite_sheets:
                             try:
@@ -472,11 +497,19 @@ class HackAndSlashApp(App):
                             # Enemies face the player
                             px, py = self.game_manager.player.position
                             e_flip = (e_pos[0] < px)
-                            tex_coords = sheet.get_tex_coords(self._current_frame, flip_x=not e_flip)
+                            # Determine animation frame
+                            if enemy.action == "attack":
+                                # Attack animation starts from frame 0 and plays based on time
+                                anim_frame = int((game_time - enemy.action_time) / 0.1)
+                            else:
+                                # Normal animations use global frame
+                                anim_frame = self._current_frame
+                                
+                            tex_coords = sheet.get_tex_coords(anim_frame, flip_x=not e_flip)
                             
                             Color(1, 1, 1, 1)
                             # Proportional scaling (Base: 192px -> 220px)
-                            if e_name == "Boss":
+                            if e_name == "boss":
                                 e_size = (600, 600)
                             else:
                                 s = sheet.frame_size * (220/192)

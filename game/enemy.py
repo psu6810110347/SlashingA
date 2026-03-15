@@ -26,6 +26,10 @@ class Enemy:
         # Hitbox and Ranges (default)
         self.hitbox_radius = 50
         self.attack_range = 80
+        
+        # Action tracking
+        self.action = "run"
+        self.action_time = 0
     
     def take_damage(self, damage):
         """Take damage"""
@@ -63,6 +67,7 @@ class Enemy:
             'pos': self.position,
             'hitbox_radius': self.hitbox_radius,
             'attack_range': self.attack_range,
+            'action': self.action,
         }
 
 

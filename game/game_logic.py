@@ -265,13 +265,20 @@ class GameManager:
         for enemy in self.enemies:
             # If it's a Shooter, spawn a projectile instead of direct hit
             if isinstance(enemy, ShooterEnemy):
-                # Check cooldown (every 2 seconds)
+                # Check cooldown (every 4.5 seconds to balance/optimize)
                 current_time = self.time_manager.elapsed_time
-                if current_time - getattr(enemy, 'last_shot_time', 0) >= 2.0:
+                
+                ex, ey = enemy.position
+                px, py = self.player.position
+                dx, dy = px - ex, py - ey
+                dist = (dx**2 + dy**2)**0.5
+                
+                if current_time - getattr(enemy, 'last_shot_time', 0) >= 4.5 and dist < enemy.attack_range:
                     enemy.last_shot_time = current_time
                     
-                    ex, ey = enemy.position
-                    px, py = self.player.position
+                    # Set attack animation state
+                    enemy.action = "attack"
+                    enemy.action_time = current_time
                     
                     # Calculate direction vector
                     dx, dy = px - ex, py - ey
@@ -301,6 +308,9 @@ class GameManager:
                 # Melee range is specific to enemy type
                 if dist < enemy.attack_range:
                     enemy.last_shot_time = current_time
+                    enemy.action = "attack"
+                    enemy.action_time = current_time
+                    
                     damage = enemy.attack_player()
                     actual_damage = self.player.take_damage(damage)
                     total_damage_taken += actual_damage
