@@ -7,7 +7,8 @@ from kivy.app import App
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.core.window import Window
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle, Ellipse
+from kivy.graphics import Color, Rectangle, Ellipse, Rotate, PushMatrix, PopMatrix
+import math
 
 from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup
 from events.callbacks import CallbackManager
@@ -79,6 +80,7 @@ class HackAndSlashApp(App):
         self._last_anim_update = time.time()
         self._current_frame = 0 # Track frame for walk cycles
         self.player_facing_right = True # Track player direction
+        self._last_attack_time = 0 # Track attack cooldown
     
     def build(self):
         """Build the application"""
@@ -164,6 +166,14 @@ class HackAndSlashApp(App):
         """Handle mouse clicks"""
         if self.screen_manager.current == 'game' and not self.callback_manager.game_state['is_paused']:
             if touch.button == 'left':
+                now = Clock.get_time()
+                # 0.6s cooldown matches 6 frames at 0.1s/frame
+                if now - self._last_attack_time < 0.6:
+                    return True
+                
+                self._last_attack_time = now
+                self._current_frame = 0 # Start attack animation from first frame
+                
                 px = self.game_manager.player.position[0] + 10
                 py = self.game_manager.player.position[1] + 10
                 dx = touch.x - px
@@ -177,8 +187,8 @@ class HackAndSlashApp(App):
                 attack_x = px + (dx * attack_range)
                 attack_y = py + (dy * attack_range)
                 
-                self.active_attacks.append((attack_x, attack_y, Clock.get_time()))
-                self.callback_manager.on_attack(None)
+                self.active_attacks.append((attack_x, attack_y, now))
+                self.callback_manager.on_attack(self.player_facing_right)
             return True
         return False
     
@@ -481,19 +491,24 @@ class HackAndSlashApp(App):
                             else: Color(0.8, 0.2, 0.2, 1)
                             Rectangle(pos=(e_pos[0]-25, e_pos[1]-25), size=(50, 50))
 
-                # 6. Draw Attacks & Projectiles
+                # 6. Draw Attacks (No visuals needed, just cooldown management)
                 current_time = Clock.get_time()
-                self.active_attacks = [a for a in self.active_attacks if current_time - a[2] < 0.2]
-                Color(1.0, 0.2, 0.2, 1)
-                for attack_x, attack_y, _ in self.active_attacks:
-                    Rectangle(pos=(attack_x - 10, attack_y - 10), size=(20, 20))
+                # Sync visibility duration with cooldown/animation length
+                self.active_attacks = [a for a in self.active_attacks if current_time - a[2] < 0.6]
                     
                 proj_path = "images/projectiles/bullet.png"
                 if os.path.exists(proj_path):
-                    Color(1, 1, 1, 1)
                     if 'active_projectiles' in state:
                         for p in state['active_projectiles']:
-                            Rectangle(source=proj_path, pos=(p['pos'][0] - 10, p['pos'][1] - 10), size=(20, 20))
+                            # Calculate rotation angle based on direction
+                            angle = math.degrees(math.atan2(p['dir'][1], p['dir'][0]))
+                            
+                            PushMatrix()
+                            Rotate(angle=angle, origin=(p['pos'][0], p['pos'][1]))
+                            Color(1, 1, 1, 1)
+                            # Native size is 64x64, let's use 84x84 for better visibility
+                            Rectangle(source=proj_path, pos=(p['pos'][0] - 42, p['pos'][1] - 42), size=(84, 84))
+                            PopMatrix()
                 else:
                     Color(1.0, 1.0, 0.0, 1)
                     if 'active_projectiles' in state:

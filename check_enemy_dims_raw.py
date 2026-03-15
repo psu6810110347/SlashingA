@@ -8,7 +8,8 @@ def get_image_info(data):
 files = [
     "d:/SlashingA/images/enemy/normal.png",
     "d:/SlashingA/images/enemy/tank.png",
-    "d:/SlashingA/images/enemy/shooter.png"
+    "d:/SlashingA/images/enemy/shooter.png",
+    "d:/SlashingA/images/projectiles/bullet.png"
 ]
 
 for f in files:

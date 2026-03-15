@@ -179,26 +179,35 @@ class GameManager:
         self.add_log("A Perk Orb has appeared!")
         self.active_perks.append(perk)
     
-    def player_attack(self):
-        """Handle player attack"""
+    def player_attack(self, is_facing_right=True):
+        """Handle player attack with directional check"""
         if not self.is_combat_active or not self.enemies:
             return None
         
         px, py = self.player.position
         
-        # Find the closest enemy within range
+        # Find the closest enemy within range AND in front of player
         closest_enemy = None
         min_dist = float('inf')
         
         for enemy in self.enemies:
             ex, ey = enemy.position
-            dist = ((px - ex)**2 + (py - ey)**2)**0.5
-            if dist < min_dist and dist <= self.player.attack_range:
-                min_dist = dist
-                closest_enemy = enemy
+            dx = ex - px
+            dist = (dx**2 + (py - ey)**2)**0.5
+            
+            # Distance check
+            if dist <= self.player.attack_range:
+                # Directional check: enemy must be on the side the player is facing
+                # If facing right, dx should be positive. If facing left, dx should be negative.
+                # We allow a small margin (e.g. 5px) to avoid being too strict on vertical overlap
+                is_in_front = (is_facing_right and dx > -10) or (not is_facing_right and dx < 10)
+                
+                if is_in_front and dist < min_dist:
+                    min_dist = dist
+                    closest_enemy = enemy
                 
         if not closest_enemy:
-            return 0 # Too far from all enemies
+            return 0 # Too far or wrong direction
             
         damage = self.player.attack + random.randint(-2, 5)
         actual_damage = closest_enemy.take_damage(damage)
