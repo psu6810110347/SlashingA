@@ -4,7 +4,7 @@ Contains core game mechanics and management
 """
 
 from game.player import Player
-from game.enemy import NormalEnemy, TankEnemy, ShooterEnemy, Boss
+from game.enemy import KnightEnemy, LancerEnemy, ArcherEnemy, Boss
 from game.time_manager import TimeManager
 import random
 
@@ -135,7 +135,7 @@ class GameManager:
 
     def spawn_enemy(self):
         """Spawn random enemy off-screen and scale based on time elapsed"""
-        enemy_types = [NormalEnemy, TankEnemy, ShooterEnemy]
+        enemy_types = [KnightEnemy, LancerEnemy, ArcherEnemy]
         enemy_class = random.choice(enemy_types)
         
         # Scale stats: 1 factor for every 5 minutes (300 seconds)
@@ -263,8 +263,8 @@ class GameManager:
         total_damage_taken = 0
             
         for enemy in self.enemies:
-            # If it's a Shooter, spawn a projectile instead of direct hit
-            if isinstance(enemy, ShooterEnemy):
+            # If it's a Archer, spawn a projectile instead of direct hit
+            if isinstance(enemy, ArcherEnemy):
                 # Check cooldown (every 4.5 seconds to balance/optimize)
                 current_time = self.time_manager.elapsed_time
                 

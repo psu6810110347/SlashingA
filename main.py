@@ -15,8 +15,10 @@ from events.callbacks import CallbackManager
 from game.game_logic import GameManager
 from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup, GameOverScreen
 from kivy.core.image import Image as CoreImage
+from kivy.core.audio import SoundLoader
 import os
 import time
+import math
 
 # Default Constants for Tiny Swords Asset Pack
 DEFAULT_FRAME_SIZE = 192
@@ -81,6 +83,7 @@ class HackAndSlashApp(App):
         self._current_frame = 0 # Track frame for walk cycles
         self.player_facing_right = True # Track player direction
         self._last_attack_time = 0 # Track attack cooldown
+        self.current_bgm = None
     
     def build(self):
         """Build the application"""
@@ -109,6 +112,7 @@ class HackAndSlashApp(App):
         self.screen_manager.add_widget(game_over_screen)
         # Set default screen
         self.screen_manager.current = 'menu'
+        self.play_bgm('audio/bgm/menu.mp3')
         
         # Bind keyboard and mouse events
         Window.bind(
@@ -203,6 +207,24 @@ class HackAndSlashApp(App):
         self.screen_manager.current = 'game'
         # Update game display frequently (60 FPS)
         Clock.schedule_interval(self.update_game_display, 1.0 / 60.0)
+        # Start game music
+        self.play_bgm('audio/bgm/game.mp3')
+    
+    def play_bgm(self, path):
+        """Play background music looping. Gracefully handles missing files."""
+        if self.current_bgm:
+            self.current_bgm.stop()
+            self.current_bgm = None
+            
+        if os.path.exists(path):
+            self.current_bgm = SoundLoader.load(path)
+            if self.current_bgm:
+                self.current_bgm.loop = True
+                self.current_bgm.volume = 0.5
+                self.current_bgm.play()
+                print(f"BGM Playing: {path}")
+        else:
+            print(f"BGM File not found (skipping): {path}")
     
     def update_game_display(self, dt):
         """Update game display and animations"""
@@ -484,8 +506,8 @@ class HackAndSlashApp(App):
                                 if "boss" in e_name.lower():
                                     frame_w = 128
                                     columns = 6
-                                elif "orc" in e_sheet_path:
-                                    frame_w = 100
+                                elif "knight" in e_sheet_path:
+                                    frame_w = 192
                                     columns = 6
                                 
                                 self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=frame_w, cols=columns)
@@ -518,9 +540,9 @@ class HackAndSlashApp(App):
                             Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
                                       pos=(e_pos[0] - e_size[0]/2, e_pos[1] - e_size[1]/2), size=e_size)
                         else:
-                            if e_name == "Tank": Color(0.8, 0.4, 0.0, 1)
-                            elif e_name == "Shooter": Color(0.8, 0.0, 0.8, 1)
-                            elif e_name == "Boss": Color(0.6, 0.0, 0.0, 1)
+                            if e_name == "lancer": Color(0.8, 0.4, 0.0, 1)
+                            elif e_name == "archer": Color(0.8, 0.0, 0.8, 1)
+                            elif e_name == "boss": Color(0.6, 0.0, 0.0, 1)
                             else: Color(0.8, 0.2, 0.2, 1)
                             Rectangle(pos=(e_pos[0]-25, e_pos[1]-25), size=(50, 50))
 

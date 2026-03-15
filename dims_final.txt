@@ -1,9 +1,0 @@
-normal_attack.png,768,192
-tank_attack.png,960,320
-shooter_attack.png,1536,192
-normal_idle.png,1536,192
-tank_idle.png,3840,320
-shooter_idle.png,1152,192
-normal.png,1152,192
-tank.png,1920,320
-shooter.png,768,192

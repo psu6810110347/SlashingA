@@ -1,5 +1,0 @@
-d:/SlashingA/images/decorations/bush1.png: 1024x128
-d:/SlashingA/images/decorations/bush2.png: 1024x128
-d:/SlashingA/images/decorations/rock1.png: 64x64
-d:/SlashingA/images/decorations/rock2.png: 64x64
-d:/SlashingA/images/decorations/tree.png: 1536x256

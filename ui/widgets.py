@@ -78,6 +78,21 @@ class MainMenuScreen(Screen):
         
         main_layout.add_widget(button_container)
         self.add_widget(main_layout)
+        
+        # Music Credit Label (Bottom Right)
+        music_credit = Label(
+            text='Music track: Ballad by Pufino\nSource: [u]https://freetouse.com/music[/u]\nRoyalty Free Music for Video (Safe)',
+            font_size='12sp',
+            markup=True,
+            size_hint=(None, None),
+            size=(300, 60),
+            halign='right',
+            valign='bottom',
+            pos_hint={'right': 1, 'bottom': 1},
+            color=(1, 1, 1, 0.6) # Semi-transparent
+        )
+        music_credit.bind(size=music_credit.setter('text_size'))
+        self.add_widget(music_credit)
 
 
 class GameScreen(Screen):
@@ -310,6 +325,21 @@ class GameScreen(Screen):
         self.perk_overlay.opacity = 0
         self.perk_overlay.disabled = True
         main_layout.add_widget(self.perk_overlay)
+        
+        # Music Credit Label (Bottom Right)
+        music_credit = Label(
+            text='Music track: Guardian of the Former Seas by DM DOKURO',
+            font_size='12sp',
+            markup=True,
+            size_hint=(None, None),
+            size=(400, 30),
+            halign='right',
+            valign='bottom',
+            pos_hint={'right': 1, 'bottom': 1},
+            color=(1, 1, 1, 0.6) # Semi-transparent
+        )
+        music_credit.bind(size=music_credit.setter('text_size'))
+        main_layout.add_widget(music_credit)
         
         self.add_widget(main_layout)
 
@@ -563,14 +593,14 @@ class EnemyDetailOverlay(BoxLayout):
     def _populate_codex(self):
         """Populate the codex with enemy types that actually appear in the game."""
         enemy_types = [
-            {'name': 'Normal', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Red',
-             'desc': 'A standard red enemy. Fast and aggressive melee attacker.'},
-            {'name': 'Tank', 'hp': 20, 'attack': 10, 'speed': 3, 'color': 'Orange',
-             'desc': 'An orange enemy with more HP. Slower but tougher to kill.'},
-            {'name': 'Shooter', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Purple',
-             'desc': 'A purple ranged enemy that fires yellow projectiles at you.'},
-            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'color': 'Dark Red',
-             'desc': 'A mighty Boss that spawns every 5 minutes. Very high HP and damage.'}
+            {'name': 'Knight', 'hp': 10, 'attack': 10, 'speed': 4, 'type': 'Warrior',
+             'desc': 'A brave soldier of the Red Kingdom. Aggressive and skilled in close-range sword combat.'},
+            {'name': 'Lancer', 'hp': 20, 'attack': 10, 'speed': 3, 'type': 'Vanguard',
+             'desc': 'A heavily armored lancer. Their long reach and high defense make them formidable front-line units.'},
+            {'name': 'Archer', 'hp': 10, 'attack': 10, 'speed': 4, 'type': 'Ranged',
+             'desc': 'A precision shooter who supports from afar. They fire deadly arrows with a balanced attack rate.'},
+            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'type': 'Elite',
+             'desc': 'A legendary commander of the Red Legion. Boasts massive HP and devastating special attacks.'}
         ]
 
         for enemy in enemy_types:
@@ -583,7 +613,7 @@ class EnemyDetailOverlay(BoxLayout):
                 entry.bg_rect = Rectangle(size=entry.size, pos=entry.pos)
             entry.bind(size=self._update_entry_bg, pos=self._update_entry_bg)
 
-            name_lbl = Label(text=f"[b]{enemy['name']}[/b]  ({enemy['color']})", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
+            name_lbl = Label(text=f"[b]{enemy['name']}[/b]  ({enemy['type']})", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
             name_lbl.bind(size=name_lbl.setter('text_size'))
             stats_lbl = Label(text=f"HP: {enemy['hp']}  |  Attack: {enemy['attack']}  |  Speed: {enemy['speed']}", font_size='14sp', size_hint_y=0.3, halign='left')
             stats_lbl.bind(size=stats_lbl.setter('text_size'))
@@ -753,4 +783,19 @@ class GameOverScreen(Screen):
         
         main_layout.add_widget(buttons_layout)
         self.add_widget(main_layout)
+        
+        # Music Credit Label (Bottom Right)
+        music_credit = Label(
+            text='Music track: Fallen Kingdom by Epic Spectrum\nSource: [u]https://freetouse.com/music[/u]\nCopyright Free Music (Free Download)',
+            font_size='12sp',
+            markup=True,
+            size_hint=(None, None),
+            size=(300, 60),
+            halign='right',
+            valign='bottom',
+            pos_hint={'right': 1, 'bottom': 1},
+            color=(1, 1, 1, 0.6) # Semi-transparent
+        )
+        music_credit.bind(size=music_credit.setter('text_size'))
+        self.add_widget(music_credit)
 

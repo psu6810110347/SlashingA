@@ -51,6 +51,7 @@ class CallbackManager:
         print("Returning to menu...")
         if self.app:
             self.app.show_menu_screen()
+            self.app.play_bgm('audio/bgm/menu.mp3')
         self.game_state['is_paused'] = False
     
 
@@ -108,6 +109,7 @@ class CallbackManager:
                     game_over_screen.score_label.text = f"Final Score: {score}"
                     game_over_screen.gold_earned_label.text = f"Gold Earned: {gold}"
             self.app.screen_manager.current = 'game_over'
+            self.app.play_bgm('audio/bgm/gameover.mp3')
             from kivy.clock import Clock
             Clock.unschedule(self.app.update_game_display)
         self.game_state['is_paused'] = True
