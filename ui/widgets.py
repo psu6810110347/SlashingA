@@ -22,64 +22,151 @@ class MainMenuScreen(Screen):
     def __init__(self, callback_manager, **kwargs):
         super(MainMenuScreen, self).__init__(**kwargs)
         
+        # Add tiled background image
+        from kivy.graphics import Color, Rectangle, RoundedRectangle
+        from kivy.core.image import Image as CoreImage
+        
+        self.bg_texture = None
+        try:
+            # We use the isolated grass_tile.png so it isn't an entire squished spritesheet
+            self.bg_texture = CoreImage('images/backgrounds/grass_tile.png').texture
+            self.bg_texture.wrap = 'repeat'
+            self.bg_texture.mag_filter = 'nearest' # Keep pixel art crisp
+        except Exception:
+            pass
+
+        with self.canvas.before:
+            Color(1, 1, 1, 1) # White so image shows naturally
+            if self.bg_texture:
+                self.bg_rect = Rectangle(texture=self.bg_texture, pos=self.pos, size=self.size)
+            else:
+                self.bg_rect = Rectangle(source='images/backgrounds/ground.png', pos=self.pos, size=self.size)
+            
+            # Add some decorative trees and rocks to the menu background
+            import random
+            from kivy.core.image import Image as CoreImage
+            random.seed(42) # Fixed seed so they don't jump around on resize
+            
+            # Load tree texture and calculate a single frame's coordinates
+            tree_tex = None
+            try:
+                tree_img = CoreImage('images/decorations/tree.png')
+                # Grab just a static 192x256 region from the source image texture to prevent animation
+                # The tree sprite sheet is 1536 width. It has 8 frames, so each frame is 192px wide.
+                tree_tex = tree_img.texture.get_region(0, 0, 192, tree_img.height)
+            except Exception:
+                pass
+            
+            # Draw 15 random trees
+            for _ in range(15):
+                x = random.randint(-50, 1300)
+                y = random.randint(-50, 750)
+                size_variation = random.uniform(0.8, 1.2)
+                tree_w = 192 * size_variation
+                tree_h = 256 * size_variation
+                if tree_tex:
+                    Rectangle(texture=tree_tex, pos=(x, y), size=(tree_w, tree_h))
+                else:
+                    Rectangle(source='images/decorations/tree.png', pos=(x, y), size=(tree_w, tree_h))
+                
+            # Draw 10 random rocks (only rock1 and rock2 exist in folders)
+            for _ in range(10):
+                x = random.randint(0, 1280)
+                y = random.randint(0, 720)
+                rock_type = random.choice([1, 2])
+                rsize = random.randint(30, 60)
+                Rectangle(source=f'images/decorations/rock{rock_type}.png', pos=(x, y), size=(rsize, rsize))
+            
+        self.bind(pos=self._update_bg, size=self._update_bg)
+
         # Create main layout
         main_layout = BoxLayout(
             orientation='vertical',
-            padding=10,
-            spacing=20
+            padding=50,
+            spacing=30
         )
         
-        # Title
+        # Title (with outline instead of dark plate)
+        title_box = BoxLayout(size_hint_y=0.4, padding=10)
         title = Label(
             text='[b]SlashingA[/b]',
-            font_size='48sp',
+            font_size='100sp',
             markup=True,
-            size_hint_y=0.3
+            color=(1.0, 0.85, 0.2, 1), # Bright Gold
+            outline_width=4,
+            outline_color=(0.1, 0.1, 0.1, 1) # Dark outline
         )
-        main_layout.add_widget(title)
+        title_box.add_widget(title)
+        main_layout.add_widget(title_box)
         
-        # Controls Information
+        # Controls Information (with outline)
+        controls_box = BoxLayout(size_hint_y=0.2, padding=10)
         controls_label = Label(
-            text='[b]How to Play:[/b]\nW, A, S, D - Move\nLeft Mouse Click - Attack\nP - Pause Game\nESC - Main Menu',
-            font_size='18sp',
+            text='[b]CONTROLS[/b]\n[color=cccccc]W A S D[/color] to Move  |  [color=cccccc]Left Click[/color] to Slash\n[color=cccccc]P[/color] to Pause  |  [color=cccccc]ESC[/color] for Menu',
+            font_size='22sp',
             markup=True,
             halign='center',
-            size_hint_y=0.2
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
-        main_layout.add_widget(controls_label)
+        controls_box.add_widget(controls_label)
+        main_layout.add_widget(controls_box)
         
         # Buttons container
         button_container = BoxLayout(
             orientation='vertical',
-            size_hint_y=0.5,
-            spacing=15,
-            padding=20
+            size_hint_y=0.4,
+            spacing=25,
+            padding=[300, 10, 300, 40] # Very squeezed horizontal for wide pill buttons
         )
         
+        def _update_btn_rect(instance, value):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+
         # Start button
         start_btn = Button(
-            text='START GAME',
-            font_size='24sp',
-            size_hint_y=0.4,
-            background_color=(0.2, 0.8, 0.2, 1)
+            text='[b]START ADVENTURE[/b]',
+            font_size='26sp',
+            markup=True,
+            size_hint_y=0.5,
+            background_normal='',
+            background_color=(0, 0, 0, 0), # Transparent so we see the canvas below
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
+        with start_btn.canvas.before:
+            Color(0.15, 0.65, 0.25, 0.85) # Premium green
+            start_btn.bg_rect = RoundedRectangle(pos=start_btn.pos, size=start_btn.size, radius=[25])
+        start_btn.bind(pos=_update_btn_rect, size=_update_btn_rect)
         start_btn.bind(on_press=callback_manager.on_start_game)
         button_container.add_widget(start_btn)
         
         # Quit button
         quit_btn = Button(
-            text='QUIT',
-            font_size='24sp',
-            size_hint_y=0.4,
-            background_color=(0.8, 0.2, 0.2, 1)
+            text='[b]EXIT REALM[/b]',
+            font_size='26sp',
+            markup=True,
+            size_hint_y=0.5,
+            background_normal='',
+            background_color=(0, 0, 0, 0), # Transparent
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
+        with quit_btn.canvas.before:
+            Color(0.8, 0.15, 0.15, 0.85) # Premium red
+            quit_btn.bg_rect = RoundedRectangle(pos=quit_btn.pos, size=quit_btn.size, radius=[25])
+        quit_btn.bind(pos=_update_btn_rect, size=_update_btn_rect)
         quit_btn.bind(on_press=callback_manager.on_quit_game)
         button_container.add_widget(quit_btn)
         
         main_layout.add_widget(button_container)
         self.add_widget(main_layout)
         
-        # Music Credit Label (Bottom Right)
+        # Music Credit Label
         music_credit = Label(
             text='Music track: Ballad by Pufino\nSource: [u]https://freetouse.com/music[/u]\nRoyalty Free Music for Video (Safe)',
             font_size='12sp',
@@ -89,11 +176,26 @@ class MainMenuScreen(Screen):
             halign='right',
             valign='bottom',
             pos_hint={'right': 1, 'bottom': 1},
-            color=(1, 1, 1, 0.6) # Semi-transparent
+            color=(1, 1, 1, 0.9),
+            outline_width=1,
+            outline_color=(0,0,0,1)
         )
         music_credit.bind(size=music_credit.setter('text_size'))
         self.add_widget(music_credit)
 
+    def _update_bg(self, instance, value):
+        self.bg_rect.pos = instance.pos
+        self.bg_rect.size = instance.size
+        
+        # Update tex_coords to repeat the texture based on screen size
+        if hasattr(self, 'bg_texture') and self.bg_texture:
+            tw = self.bg_texture.width
+            th = self.bg_texture.height
+            if tw > 0 and th > 0:
+                # Scale by 2.0 to make the tiles slightly larger/prettier, similar to pixel art styling
+                w = instance.width / (tw * 2.0)
+                h = instance.height / (th * 2.0)
+                self.bg_rect.tex_coords = (0, 0, w, 0, w, h, 0, h)
 
 class GameScreen(Screen):
     """Main game play screen"""
