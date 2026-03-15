@@ -100,4 +100,5 @@ class Player:
             'speed': self.speed,
             'gold': self.gold,
             'score': self.score,
+            'pos': self.position,
         }

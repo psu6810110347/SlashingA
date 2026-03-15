@@ -33,7 +33,7 @@ class SpriteSheet:
             except Exception as e:
                 print(f"Error loading sheet {source}: {e}")
         
-    def get_tex_coords(self, frame_x, frame_y=0):
+    def get_tex_coords(self, frame_x, frame_y=0, flip_x=False):
         """Calculate UV coordinates for a frame in a sheet (defaults to row 0 for single-action sheets)"""
         if not self.texture:
             return None
@@ -52,6 +52,9 @@ class SpriteSheet:
         v_bottom = 1.0 - (frame_y + 1) * v_step
         v_top = 1.0 - frame_y * v_step
         
+        # Horizontal flip logic
+        if flip_x:
+            return [u + u_step, v_top, u, v_top, u, v_bottom, u + u_step, v_bottom]
         return [u, v_top, u + u_step, v_top, u + u_step, v_bottom, u, v_bottom]
 
 
@@ -74,7 +77,8 @@ class HackAndSlashApp(App):
         self.perk_menu = None
         self.sprite_sheets = {}
         self._last_anim_update = time.time()
-        self._current_frame = 0
+        self._current_frame = 0 # Track frame for walk cycles
+        self.player_facing_right = True # Track player direction
     
     def build(self):
         """Build the application"""
@@ -115,6 +119,11 @@ class HackAndSlashApp(App):
     
     def on_key_down(self, window, key, scancode, codepoint, modifier):
         """Handle key press"""
+        if codepoint == 'a':
+            self.player_facing_right = False
+        elif codepoint == 'd':
+            self.player_facing_right = True
+
         if codepoint in ['w', 'a', 's', 'd']:
             self.pressed_keys.add(codepoint)
             
@@ -406,14 +415,14 @@ class HackAndSlashApp(App):
                     if player_anim_path not in self.sprite_sheets:
                         self.sprite_sheets[player_anim_path] = SpriteSheet(player_anim_path)
                     sheet = self.sprite_sheets[player_anim_path]
-                    if sheet.texture:
-                        tex_coords = sheet.get_tex_coords(self._current_frame)
-                        Color(1, 1, 1, 1)
-                        Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
-                                  pos=(pos[0]-125, pos[1]-125), size=(250, 250))
-                    else:
-                        Color(0.2, 0.6, 1.0, 1)
-                        Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
+                if sheet.texture:
+                    tex_coords = sheet.get_tex_coords(self._current_frame, flip_x=not self.player_facing_right)
+                    Color(1, 1, 1, 1)
+                    Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
+                              pos=(pos[0]-125, pos[1]-125), size=(250, 250))
+                else:
+                    Color(0.2, 0.6, 1.0, 1)
+                    Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
                     
                 # 5. Draw Enemies
                 for enemy in self.game_manager.enemies:
@@ -425,21 +434,44 @@ class HackAndSlashApp(App):
                         if not os.path.exists(e_sheet_path): e_sheet_path = "images/enemy/orc.png"
 
                         if e_sheet_path not in self.sprite_sheets:
-                            if "orc" in e_name.lower() or "orc" in e_sheet_path:
-                                self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=100, cols=6)
-                            elif "boss" in e_name.lower():
-                                self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=128, cols=6)
-                            else:
-                                try:
-                                    temp_tex = CoreImage(e_sheet_path).texture
-                                    if temp_tex: self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=temp_tex.height)
-                                except: self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path)
+                            try:
+                                # Get texture dimensions to detect frame size
+                                t = CoreImage(e_sheet_path).texture
+                                h = t.height
+                                w = t.width
+                                
+                                # Tiny Swords standard: frame size = height
+                                # Columns = width / frame size
+                                frame_w = h
+                                columns = max(1, int(w / h))
+                                
+                                # Special override for Boss (Skeleton) if needed
+                                if "boss" in e_name.lower():
+                                    frame_w = 128
+                                    columns = 6
+                                elif "orc" in e_sheet_path:
+                                    frame_w = 100
+                                    columns = 6
+                                
+                                self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=frame_w, cols=columns)
+                            except:
+                                self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path)
                         
                         sheet = self.sprite_sheets.get(e_sheet_path)
                         if sheet and sheet.texture:
-                            tex_coords = sheet.get_tex_coords(self._current_frame)
+                            # Enemies face the player
+                            px, py = self.game_manager.player.position
+                            e_flip = (e_pos[0] < px)
+                            tex_coords = sheet.get_tex_coords(self._current_frame, flip_x=not e_flip)
+                            
                             Color(1, 1, 1, 1)
-                            e_size = (600, 600) if e_name == "Boss" else (220, 220)
+                            # Proportional scaling (Base: 192px -> 220px)
+                            if e_name == "Boss":
+                                e_size = (600, 600)
+                            else:
+                                s = sheet.frame_size * (220/192)
+                                e_size = (s, s)
+                            
                             Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
                                       pos=(e_pos[0] - e_size[0]/2, e_pos[1] - e_size[1]/2), size=e_size)
                         else:

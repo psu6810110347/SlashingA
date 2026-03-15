@@ -55,9 +55,8 @@ class Enemy:
             'max_hp': self.max_hp,
             'attack': self.attack,
             'defense': self.defense,
-            # Some enemies (NormalEnemy, TankEnemy, ShooterEnemy, Boss) define speed;
-            # use getattr so base class still works if speed is missing.
             'speed': getattr(self, 'speed', 0),
+            'pos': self.position,
         }
 
 
@@ -69,7 +68,6 @@ class NormalEnemy(Enemy):
         self.max_hp = self.hp
         self.attack = 10 + (scaling_factor * 5)
         self.speed = 4
-
 
 
 class TankEnemy(Enemy):
@@ -91,94 +89,6 @@ class ShooterEnemy(Enemy):
         self.attack = 10 + (scaling_factor * 5)
         self.speed = 4
         self.last_shot_time = 0
-
-"""
-Enemy Module
-Contains enemy classes and mechanics
-"""
-
-import random
-
-
-class Enemy:
-    """Base enemy class"""
-    
-    def __init__(self, name="Enemy", level=1):
-        """Initialize enemy"""
-        self.name = name
-        self.level = level
-        self.hp = 30 + (level * 10)
-        self.max_hp = self.hp
-        self.attack = 5 + (level * 2)
-        self.defense = 2 + level
-        self.exp_reward = 50 * level
-        self.gold_reward = 10 * level
-        self.loot = []
-        self.position = [0, 0]
-        self.is_alive = True
-    
-    def take_damage(self, damage):
-        """Take damage"""
-        actual_damage = max(1, damage - self.defense)
-        self.hp -= actual_damage
-        if self.hp <= 0:
-            self.hp = 0
-            self.is_alive = False
-        return actual_damage
-    
-    def attack_player(self):
-        """Attack player"""
-        # Base damage with some randomness
-        damage = self.attack + random.randint(-3, 3)
-        return max(1, damage)
-    
-    def defeat(self):
-        """Handle enemy defeat"""
-        return {
-            'exp': self.exp_reward,
-            'gold': self.gold_reward,
-            'loot': self.loot
-        }
-    
-    def get_stats(self):
-        """Get enemy stats"""
-        return {
-            'name': self.name,
-            'level': self.level,
-            'hp': self.hp,
-            'max_hp': self.max_hp,
-            'attack': self.attack,
-            'defense': self.defense,
-        }
-
-
-class Goblin(Enemy):
-    """Goblin enemy"""
-    def __init__(self, level=1):
-        super().__init__("Goblin", level)
-        self.hp = 20 + (level * 5)
-        self.max_hp = self.hp
-        self.attack = 4 + level
-
-
-class Orc(Enemy):
-    """Orc enemy"""
-    def __init__(self, level=1):
-        super().__init__("Orc", level)
-        self.hp = 40 + (level * 15)
-        self.max_hp = self.hp
-        self.attack = 8 + (level * 2)
-        self.defense = 3 + level
-
-
-class Skeleton(Enemy):
-    """Skeleton enemy"""
-    def __init__(self, level=1):
-        super().__init__("Skeleton", level)
-        self.hp = 25 + (level * 8)
-        self.max_hp = self.hp
-        self.attack = 6 + level
-        self.defense = 1 + level
 
 
 class Boss(Enemy):
