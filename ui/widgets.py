@@ -78,6 +78,21 @@ class MainMenuScreen(Screen):
         
         main_layout.add_widget(button_container)
         self.add_widget(main_layout)
+        
+        # Music Credit Label (Bottom Right)
+        music_credit = Label(
+            text='Music track: Ballad by Pufino\nSource: [u]https://freetouse.com/music[/u]\nRoyalty Free Music for Video (Safe)',
+            font_size='12sp',
+            markup=True,
+            size_hint=(None, None),
+            size=(300, 60),
+            halign='right',
+            valign='bottom',
+            pos_hint={'right': 1, 'bottom': 1},
+            color=(1, 1, 1, 0.6) # Semi-transparent
+        )
+        music_credit.bind(size=music_credit.setter('text_size'))
+        self.add_widget(music_credit)
 
 
 class GameScreen(Screen):
@@ -87,6 +102,11 @@ class GameScreen(Screen):
         
         # Create main layout (FloatLayout to allow overlaying)
         main_layout = FloatLayout()
+        
+        # Dedicated game world layer (Bottom-most)
+        from kivy.uix.widget import Widget
+        self.game_world = Widget(size_hint=(1, 1))
+        main_layout.add_widget(self.game_world)
         
         # Track which enemy index is focused in the detail overlay
         self.enemy_detail_index = 0
@@ -107,6 +127,13 @@ class GameScreen(Screen):
             spacing=4,
             padding=5
         )
+        
+        # Add background to HUD
+        from kivy.graphics import Color, Rectangle
+        with hud.canvas.before:
+            Color(0, 0, 0, 0.7) # Darker for better contrast
+            hud.bg_rect = Rectangle(pos=hud.pos, size=hud.size)
+        hud.bind(pos=self._update_hud_bg, size=self._update_hud_bg)
 
         # First row: basic stats + enemy detail button (top-right)
         top_row = BoxLayout(
@@ -178,6 +205,12 @@ class GameScreen(Screen):
             spacing=2
         )
         
+        # Add background to Stat Panel
+        with self.stat_panel.canvas.before:
+            Color(0, 0, 0, 0.6) # Darker for better contrast
+            self.stat_panel.bg_rect = Rectangle(pos=self.stat_panel.pos, size=self.stat_panel.size)
+        self.stat_panel.bind(pos=self._update_stat_bg, size=self._update_stat_bg)
+        
         stat_title = Label(text='[b]PLAYER STATS[/b]', markup=True, font_size='16sp', size_hint_y=None, height=40)
         self.side_hp_label = Label(text='HP: 100/100', font_size='14sp', size_hint_y=None, height=20)
         self.side_atk_label = Label(text='Attack: 10', font_size='14sp', size_hint_y=None, height=20)
@@ -246,6 +279,12 @@ class GameScreen(Screen):
             size_hint_x=0.85
         )
         
+        # Right Side: Game Canvas and Controls
+        right_area = BoxLayout(
+            orientation='vertical',
+            size_hint_x=0.85
+        )
+        
         # Game canvas area
         self.game_canvas = BoxLayout(
             orientation='vertical',
@@ -287,7 +326,30 @@ class GameScreen(Screen):
         self.perk_overlay.disabled = True
         main_layout.add_widget(self.perk_overlay)
         
+        # Music Credit Label (Bottom Right)
+        music_credit = Label(
+            text='Music track: Guardian of the Former Seas by DM DOKURO',
+            font_size='12sp',
+            markup=True,
+            size_hint=(None, None),
+            size=(400, 30),
+            halign='right',
+            valign='bottom',
+            pos_hint={'right': 1, 'bottom': 1},
+            color=(1, 1, 1, 0.6) # Semi-transparent
+        )
+        music_credit.bind(size=music_credit.setter('text_size'))
+        main_layout.add_widget(music_credit)
+        
         self.add_widget(main_layout)
+
+    def _update_hud_bg(self, instance, value):
+        instance.bg_rect.pos = instance.pos
+        instance.bg_rect.size = instance.size
+
+    def _update_stat_bg(self, instance, value):
+        instance.bg_rect.pos = instance.pos
+        instance.bg_rect.size = instance.size
 
     def toggle_enemy_detail_overlay(self):
         """Toggle enemy detail overlay using Tab key, pause/unpause game like perk selection"""
@@ -381,7 +443,7 @@ class PerkSelectionOverlay(BoxLayout):
         # Background color to dim the screen
         from kivy.graphics import Color, Rectangle
         with self.canvas.before:
-            Color(0, 0, 0, 0.8) # semi-transparent black
+            self.bg_color = Color(0, 0, 0, 0.85) # Very dark semi-transparent black
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
         
@@ -531,14 +593,14 @@ class EnemyDetailOverlay(BoxLayout):
     def _populate_codex(self):
         """Populate the codex with enemy types that actually appear in the game."""
         enemy_types = [
-            {'name': 'Normal', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Red',
-             'desc': 'A standard red enemy. Fast and aggressive melee attacker.'},
-            {'name': 'Tank', 'hp': 20, 'attack': 10, 'speed': 3, 'color': 'Orange',
-             'desc': 'An orange enemy with more HP. Slower but tougher to kill.'},
-            {'name': 'Shooter', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Purple',
-             'desc': 'A purple ranged enemy that fires yellow projectiles at you.'},
-            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'color': 'Dark Red',
-             'desc': 'A mighty Boss that spawns every 5 minutes. Very high HP and damage.'}
+            {'name': 'Knight', 'hp': 10, 'attack': 10, 'speed': 4, 'type': 'Warrior',
+             'desc': 'A brave soldier of the Red Kingdom. Aggressive and skilled in close-range sword combat.'},
+            {'name': 'Lancer', 'hp': 20, 'attack': 10, 'speed': 3, 'type': 'Vanguard',
+             'desc': 'A heavily armored lancer. Their long reach and high defense make them formidable front-line units.'},
+            {'name': 'Archer', 'hp': 10, 'attack': 10, 'speed': 4, 'type': 'Ranged',
+             'desc': 'A precision shooter who supports from afar. They fire deadly arrows with a balanced attack rate.'},
+            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'type': 'Elite',
+             'desc': 'A legendary commander of the Red Legion. Boasts massive HP and devastating special attacks.'}
         ]
 
         for enemy in enemy_types:
@@ -551,7 +613,7 @@ class EnemyDetailOverlay(BoxLayout):
                 entry.bg_rect = Rectangle(size=entry.size, pos=entry.pos)
             entry.bind(size=self._update_entry_bg, pos=self._update_entry_bg)
 
-            name_lbl = Label(text=f"[b]{enemy['name']}[/b]  ({enemy['color']})", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
+            name_lbl = Label(text=f"[b]{enemy['name']}[/b]  ({enemy['type']})", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
             name_lbl.bind(size=name_lbl.setter('text_size'))
             stats_lbl = Label(text=f"HP: {enemy['hp']}  |  Attack: {enemy['attack']}  |  Speed: {enemy['speed']}", font_size='14sp', size_hint_y=0.3, halign='left')
             stats_lbl.bind(size=stats_lbl.setter('text_size'))
@@ -721,4 +783,19 @@ class GameOverScreen(Screen):
         
         main_layout.add_widget(buttons_layout)
         self.add_widget(main_layout)
+        
+        # Music Credit Label (Bottom Right)
+        music_credit = Label(
+            text='Music track: Fallen Kingdom by Epic Spectrum\nSource: [u]https://freetouse.com/music[/u]\nCopyright Free Music (Free Download)',
+            font_size='12sp',
+            markup=True,
+            size_hint=(None, None),
+            size=(300, 60),
+            halign='right',
+            valign='bottom',
+            pos_hint={'right': 1, 'bottom': 1},
+            color=(1, 1, 1, 0.6) # Semi-transparent
+        )
+        music_credit.bind(size=music_credit.setter('text_size'))
+        self.add_widget(music_credit)
 

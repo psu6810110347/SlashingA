@@ -51,6 +51,7 @@ class CallbackManager:
         print("Returning to menu...")
         if self.app:
             self.app.show_menu_screen()
+            self.app.play_bgm('audio/bgm/menu.mp3')
         self.game_state['is_paused'] = False
     
 
@@ -66,12 +67,12 @@ class CallbackManager:
         """Callback for wave start event"""
         print(f"Wave {wave_number} Started! {enemy_count} enemies approaching!")
 
-    def on_attack(self, instance):
-        """Callback for attack action"""
+    def on_attack(self, is_facing_right=True):
+        """Callback for attack action with direction"""
         print("Player attacking...")
         if not self.game_state['is_paused']:
             if self.app and hasattr(self.app, 'game_manager') and self.app.game_manager:
-                self.app.game_manager.player_attack()
+                self.app.game_manager.player_attack(is_facing_right=is_facing_right)
     
     def on_pause(self, instance):
         """Callback for pause button"""
@@ -108,6 +109,7 @@ class CallbackManager:
                     game_over_screen.score_label.text = f"Final Score: {score}"
                     game_over_screen.gold_earned_label.text = f"Gold Earned: {gold}"
             self.app.screen_manager.current = 'game_over'
+            self.app.play_bgm('audio/bgm/gameover.mp3')
             from kivy.clock import Clock
             Clock.unschedule(self.app.update_game_display)
         self.game_state['is_paused'] = True
