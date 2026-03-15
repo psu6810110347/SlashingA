@@ -13,6 +13,40 @@ from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup
 from events.callbacks import CallbackManager
 from game.game_logic import GameManager
 from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup, GameOverScreen
+from kivy.core.image import Image as CoreImage
+import os
+import time
+
+# Default Constants for Tiny Swords Asset Pack
+DEFAULT_FRAME_SIZE = 192
+DEFAULT_SHEET_COLS = 6
+
+class SpriteSheet:
+    def __init__(self, source, frame_size=DEFAULT_FRAME_SIZE, cols=DEFAULT_SHEET_COLS):
+        self.texture = None
+        self.frame_size = frame_size
+        self.cols = cols
+        if os.path.exists(source):
+            try:
+                self.texture = CoreImage(source).texture
+                self.texture.mag_filter = 'nearest' # Keep pixel art clean
+            except Exception as e:
+                print(f"Error loading sheet {source}: {e}")
+        
+    def get_tex_coords(self, frame_x, frame_y):
+        """Calculate UV coordinates for a frame in a sheet"""
+        if not self.texture:
+            return None
+        
+        u_step = self.frame_size / self.texture.width
+        v_step = self.frame_size / self.texture.height
+        
+        u = (frame_x % self.cols) * u_step
+        # Kivy flips V vertically (0 is bottom), Tiny Swords/Zerie sheets are top-down
+        v = 1.0 - (frame_y + 1) * v_step
+        
+        return [u, v, u + u_step, v, u + u_step, v + v_step, u, v + v_step]
+
 
 # Set window size
 Window.size = (1280, 720)
@@ -31,6 +65,9 @@ class HackAndSlashApp(App):
         self.pressed_keys = set()
         self.active_attacks = []
         self.perk_menu = None
+        self.sprite_sheets = {}
+        self._last_anim_update = time.time()
+        self._current_frame = 0
     
     def build(self):
         """Build the application"""
@@ -142,7 +179,13 @@ class HackAndSlashApp(App):
         Clock.schedule_interval(self.update_game_display, 1.0 / 60.0)
     
     def update_game_display(self, dt):
-        """Update game display"""
+        """Update game display and animations"""
+        # Global frame counter for animations (approx 10 FPS for animations)
+        now = time.time()
+        if now - self._last_anim_update > 0.1: # 0.1s = 10 FPS
+            self._current_frame = (self._current_frame + 1) % 6
+            self._last_anim_update = now
+            
         game_screen = self.screen_manager.get_screen('game')
         state = self.game_manager.get_game_state()
                 # Check if player died
@@ -300,26 +343,78 @@ class HackAndSlashApp(App):
                         game_screen.perk_overlay.opacity = 1
                         game_screen.perk_overlay.disabled = False
                     
+            # Draw Background
+            ground_path = "images/backgrounds/ground.png"
+            if os.path.exists(ground_path):
+                Color(1, 1, 1, 1)
+                Rectangle(source=ground_path, pos=(0, 0), size=(Window.width, Window.height))
+            else:
+                Color(0.1, 0.1, 0.1, 1)
+                Rectangle(pos=(0, 0), size=(Window.width, Window.height))
+
             # Draw Player
             if state['player_stats']:
                 pos = self.game_manager.player.position
-                Color(0.2, 0.6, 1.0, 1)
-                Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
+                player_sheet_path = "images/player/player.png"
+                
+                if player_sheet_path not in self.sprite_sheets:
+                    self.sprite_sheets[player_sheet_path] = SpriteSheet(player_sheet_path)
+                
+                sheet = self.sprite_sheets[player_sheet_path]
+                if sheet.texture:
+                    # Row selection: 0=Idle, 1=Run, 2=Attack
+                    row = 0
+                    if self.pressed_keys: row = 1
+                    if len(self.active_attacks) > 0: row = 2
+                    
+                    tex_coords = sheet.get_tex_coords(self._current_frame, row)
+                    Color(1, 1, 1, 1)
+                    Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
+                              pos=(pos[0]-40, pos[1]-40), size=(100, 100))
+                else:
+                    Color(0.2, 0.6, 1.0, 1)
+                    Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
                 
             # Draw Enemies
             for enemy in self.game_manager.enemies:
                 if enemy.is_alive:
                     e_pos = enemy.position
                     e_name = enemy.name
-                    if e_name == "Tank":
-                        Color(0.8, 0.4, 0.0, 1) # Orange
-                        Rectangle(pos=(e_pos[0], e_pos[1]), size=(30, 30))
-                    elif e_name == "Shooter":
-                        Color(0.8, 0.0, 0.8, 1) # Purple
-                        Rectangle(pos=(e_pos[0], e_pos[1]), size=(15, 15))
+                    e_sheet_path = f"images/enemy/{e_name.lower()}.png"
+                    
+                    if e_sheet_path not in self.sprite_sheets:
+                        # Zerie Orc uses 100x100 frames. Detect by filename.
+                        if "orc" in e_name.lower():
+                            self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=100, cols=6)
+                        else:
+                            self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path)
+                    
+                    sheet = self.sprite_sheets[e_sheet_path]
+                    if sheet.texture:
+                        row = 1 # Running
+                        if "orc" in e_name.lower():
+                            # Zerie Orc might have different row mapping, but we'll assume row 1 for now
+                            row = 1 
+                        
+                        tex_coords = sheet.get_tex_coords(self._current_frame, row)
+                        Color(1, 1, 1, 1)
+                        e_size = (100, 100)
+                        if e_name == "Boss": e_size = (240, 240)
+                        Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
+                                  pos=(e_pos[0] - e_size[0]/2, e_pos[1] - e_size[1]/2), size=e_size)
                     else:
-                        Color(0.8, 0.2, 0.2, 1) # Red (Normal)
-                        Rectangle(pos=(e_pos[0], e_pos[1]), size=(20, 20))
+                        if e_name == "Tank":
+                            Color(0.8, 0.4, 0.0, 1)
+                            Rectangle(pos=(e_pos[0], e_pos[1]), size=(30, 30))
+                        elif e_name == "Shooter":
+                            Color(0.8, 0.0, 0.8, 1)
+                            Rectangle(pos=(e_pos[0], e_pos[1]), size=(15, 15))
+                        elif e_name == "Boss":
+                            Color(0.6, 0.0, 0.0, 1)
+                            Rectangle(pos=(e_pos[0]-10, e_pos[1]-10), size=(80, 80))
+                        else:
+                            Color(0.8, 0.2, 0.2, 1)
+                            Rectangle(pos=(e_pos[0], e_pos[1]), size=(20, 20))
 
             
             # Draw Attacks
@@ -330,10 +425,17 @@ class HackAndSlashApp(App):
                 Rectangle(pos=(attack_x - 10, attack_y - 10), size=(20, 20))
                 
             # Draw Projectiles
-            Color(1.0, 1.0, 0.0, 1) # Yellow projectiles
-            if 'active_projectiles' in state:
-                for p in state['active_projectiles']:
-                    Rectangle(pos=(p['pos'][0] - 5, p['pos'][1] - 5), size=(10, 10))
+            proj_path = "images/projectiles/bullet.png"
+            if os.path.exists(proj_path):
+                Color(1, 1, 1, 1)
+                if 'active_projectiles' in state:
+                    for p in state['active_projectiles']:
+                        Rectangle(source=proj_path, pos=(p['pos'][0] - 10, p['pos'][1] - 10), size=(20, 20))
+            else:
+                Color(1.0, 1.0, 0.0, 1)
+                if 'active_projectiles' in state:
+                    for p in state['active_projectiles']:
+                        Rectangle(pos=(p['pos'][0] - 5, p['pos'][1] - 5), size=(10, 10))
 
     
     def toggle_pause_menu(self):
