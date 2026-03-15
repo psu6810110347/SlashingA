@@ -350,9 +350,62 @@ class HackAndSlashApp(App):
                         game_screen.perk_overlay.opacity = 1
                         game_screen.perk_overlay.disabled = False
                     
-            # Draw Background to fill only the game canvas area
-            Color(0.12, 0.28, 0.12, 1) # Ground grass color
-            Rectangle(pos=game_screen.game_canvas.pos, size=game_screen.game_canvas.size)
+            # Draw Tiled Background (Grid based for stability)
+            grass_tile = "images/backgrounds/grass_tile.png"
+            if os.path.exists(grass_tile):
+                if grass_tile not in self.sprite_sheets:
+                    tex = CoreImage(grass_tile).texture
+                    tex.mag_filter = 'nearest'
+                    self.sprite_sheets[grass_tile] = tex
+                
+                tex = self.sprite_sheets[grass_tile]
+                Color(1, 1, 1, 1)
+                # Manually tile the floor (20x12 grid)
+                for x in range(0, Window.width, 64):
+                    for y in range(0, Window.height, 64):
+                        # Add a tiny overlap (+1) to prevent hairline gaps
+                        Rectangle(texture=tex, pos=(x, y), size=(65, 65))
+            else:
+                Color(0.12, 0.28, 0.12, 1) # Fallback Ground grass color
+                Rectangle(pos=(0, 0), size=(Window.width, Window.height))
+
+            # Draw Decorations (Sliced scenery)
+            if hasattr(self.game_manager, 'decorations'):
+                Color(1, 1, 1, 1)
+                for deco in self.game_manager.decorations:
+                    dtype = deco['type']
+                    if 'tree' in dtype:
+                        path = "images/decorations/tree.png"
+                    elif 'bush' in dtype:
+                        idx = dtype[-1]
+                        path = f"images/decorations/bush{idx}.png"
+                    else: # rock
+                        idx = dtype[-1]
+                        path = f"images/decorations/rock{idx}.png"
+
+                    if path not in self.sprite_sheets:
+                        # Adaptive sizing: Most Tiny Swords deco are sheets where cell_size = height
+                        try:
+                            temp_tex = CoreImage(path).texture
+                            if temp_tex:
+                                h = temp_tex.height
+                                self.sprite_sheets[path] = SpriteSheet(path, frame_size=h, cols=max(1, int(temp_tex.width/h)))
+                        except:
+                            self.sprite_sheets[path] = SpriteSheet(path, frame_size=64, cols=1)
+                    
+                    sheet = self.sprite_sheets.get(path)
+                    if sheet and sheet.texture:
+                        # Decorations usually single frame or first frame is fine
+                        tex_coords = sheet.get_tex_coords(0) 
+                        Rectangle(texture=sheet.texture, tex_coords=tex_coords,
+                                  pos=deco['pos'], size=deco['size'])
+                    else:
+                        # Fallback colored squares
+                        if 'bush' in dtype: Color(0.1, 0.4, 0.1, 1)
+                        elif 'tree' in dtype: Color(0.05, 0.3, 0.05, 1)
+                        else: Color(0.5, 0.5, 0.5, 1)
+                        Rectangle(pos=deco['pos'], size=deco['size'])
+                        Color(1, 1, 1, 1)
 
             # Draw Player
             if state['player_stats']:
@@ -372,7 +425,7 @@ class HackAndSlashApp(App):
                     tex_coords = sheet.get_tex_coords(self._current_frame)
                     Color(1, 1, 1, 1)
                     Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
-                              pos=(pos[0]-60, pos[1]-60), size=(150, 150)) # Scaled up for 192px sprite
+                              pos=(pos[0]-125, pos[1]-125), size=(250, 250)) # Massive player sprite
                 else:
                     Color(0.2, 0.6, 1.0, 1)
                     Rectangle(pos=(pos[0], pos[1]), size=(20, 20))
@@ -394,35 +447,35 @@ class HackAndSlashApp(App):
 
                     
                     if e_sheet_path not in self.sprite_sheets:
-                        if "orc" in e_name.lower():
+                        if "orc" in e_name.lower() or "orc" in e_sheet_path:
                             self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=100, cols=6)
                         elif "boss" in e_name.lower():
                             self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=128, cols=6)
                         else:
-                            self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path)
+                            # Try to auto-detect frame size from height
+                            try:
+                                temp_tex = CoreImage(e_sheet_path).texture
+                                if temp_tex:
+                                    self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path, frame_size=temp_tex.height)
+                            except:
+                                self.sprite_sheets[e_sheet_path] = SpriteSheet(e_sheet_path)
                     
-                    sheet = self.sprite_sheets[e_sheet_path]
-                    if sheet.texture:
+                    sheet = self.sprite_sheets.get(e_sheet_path)
+                    if sheet and sheet.texture:
                         tex_coords = sheet.get_tex_coords(self._current_frame)
                         Color(1, 1, 1, 1)
-                        e_size = (100, 100)
-                        if e_name == "Boss": e_size = (350, 350) # Make skeleton boss massive
+                        e_size = (220, 220) # Gigantic enemy sprites
+                        if e_name == "Boss": e_size = (600, 600) # Gigantic skeleton boss
                         
                         Rectangle(texture=sheet.texture, tex_coords=tex_coords, 
                                   pos=(e_pos[0] - e_size[0]/2, e_pos[1] - e_size[1]/2), size=e_size)
                     else:
-                        if e_name == "Tank":
-                            Color(0.8, 0.4, 0.0, 1)
-                            Rectangle(pos=(e_pos[0], e_pos[1]), size=(30, 30))
-                        elif e_name == "Shooter":
-                            Color(0.8, 0.0, 0.8, 1)
-                            Rectangle(pos=(e_pos[0], e_pos[1]), size=(15, 15))
-                        elif e_name == "Boss":
-                            Color(0.6, 0.0, 0.0, 1)
-                            Rectangle(pos=(e_pos[0]-10, e_pos[1]-10), size=(80, 80))
-                        else:
-                            Color(0.8, 0.2, 0.2, 1)
-                            Rectangle(pos=(e_pos[0], e_pos[1]), size=(20, 20))
+                        # Fallback shapes (larger and centered)
+                        if e_name == "Tank": Color(0.8, 0.4, 0.0, 1)
+                        elif e_name == "Shooter": Color(0.8, 0.0, 0.8, 1)
+                        elif e_name == "Boss": Color(0.6, 0.0, 0.0, 1)
+                        else: Color(0.8, 0.2, 0.2, 1)
+                        Rectangle(pos=(e_pos[0]-25, e_pos[1]-25), size=(50, 50))
 
             
             # Draw Attacks

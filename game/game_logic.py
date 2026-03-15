@@ -44,6 +44,42 @@ class GameManager:
         self.wave_number = 0
         self.enemies_to_spawn = 0
         self.last_spawn_time = 0
+        
+        # Generate random decorations with No-Overlap check
+        self.decorations = []
+        deco_types = ['bush1', 'bush2', 'rock1', 'rock2', 'tree']
+        # Reduced count slightly for cleaner look (10-15)
+        for _ in range(random.randint(10, 15)):
+            dtype = random.choice(deco_types)
+            
+            # Size varies by type for collision/spacing check
+            if 'rock' in dtype:
+                size = (random.randint(80, 120), random.randint(80, 120))
+            elif 'bush' in dtype:
+                size = (random.randint(150, 220), random.randint(150, 220))
+            else: # tree
+                size = (random.randint(250, 350), random.randint(250, 350))
+
+            # Attempt to find a non-overlapping spot (max 10 tries)
+            for _ in range(10):
+                dx = random.randint(50, 1200)
+                dy = random.randint(50, 650)
+                
+                # Check distance to existing decorations
+                too_close = False
+                for existing in self.decorations:
+                    ex, ey = existing['pos']
+                    dist = ((dx - ex)**2 + (dy - ey)**2)**0.5
+                    # Dynamic spacing based on size
+                    min_dist = (size[0] + existing['size'][0]) * 0.4
+                    if dist < min_dist:
+                        too_close = True
+                        break
+                
+                if not too_close:
+                    self.decorations.append({'type': dtype, 'pos': (dx, dy), 'size': size})
+                    break
+
         self.time_manager.start_game_timer()
         print("New game started!")
         self.start_next_wave()
