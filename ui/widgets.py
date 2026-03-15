@@ -823,61 +823,150 @@ class GameOverScreen(Screen):
         super(GameOverScreen, self).__init__(**kwargs)
         self.callback_manager = callback_manager
         
+        # Add tiled background image and decorations (same as main menu)
+        from kivy.graphics import Color, Rectangle, RoundedRectangle
+        from kivy.core.image import Image as CoreImage
+        import random
+        
+        self.bg_texture = None
+        try:
+            self.bg_texture = CoreImage('images/backgrounds/grass_tile.png').texture
+            self.bg_texture.wrap = 'repeat'
+            self.bg_texture.mag_filter = 'nearest'
+        except Exception:
+            pass
+
+        with self.canvas.before:
+            Color(1, 1, 1, 1) # White so image shows naturally
+            if self.bg_texture:
+                self.bg_rect = Rectangle(texture=self.bg_texture, pos=self.pos, size=self.size)
+            else:
+                self.bg_rect = Rectangle(source='images/backgrounds/ground.png', pos=self.pos, size=self.size)
+            
+            # Add some decorative trees and rocks
+            random.seed(99) # Different seed from menu so it looks slightly different
+            
+            tree_tex = None
+            try:
+                tree_img = CoreImage('images/decorations/tree.png')
+                tree_tex = tree_img.texture.get_region(0, 0, 192, tree_img.height)
+            except Exception:
+                pass
+            
+            for _ in range(15):
+                x = random.randint(-50, 1300)
+                y = random.randint(-50, 750)
+                size_variation = random.uniform(0.8, 1.2)
+                tree_w = 192 * size_variation
+                tree_h = 256 * size_variation
+                if tree_tex:
+                    Rectangle(texture=tree_tex, pos=(x, y), size=(tree_w, tree_h))
+                else:
+                    Rectangle(source='images/decorations/tree.png', pos=(x, y), size=(tree_w, tree_h))
+                
+            for _ in range(10):
+                x = random.randint(0, 1280)
+                y = random.randint(0, 720)
+                rock_type = random.choice([1, 2])
+                rsize = random.randint(30, 60)
+                Rectangle(source=f'images/decorations/rock{rock_type}.png', pos=(x, y), size=(rsize, rsize))
+            
+        self.bind(pos=self._update_bg, size=self._update_bg)
+        
         main_layout = BoxLayout(
             orientation='vertical',
-            padding=20,
-            spacing=10
+            padding=50,
+            spacing=30
         )
         
         # Game Over Title
+        title_box = BoxLayout(size_hint_y=0.3, padding=10)
         title = Label(
-            text='[color=ff0000][b]GAME OVER[/b][/color]',
-            font_size='48sp',
+            text='[b]GAME OVER[/b]',
+            font_size='100sp',
             markup=True,
-            size_hint_y=0.2
+            color=(0.9, 0.1, 0.1, 1), # Bright Red
+            outline_width=4,
+            outline_color=(0.1, 0.1, 0.1, 1) # Dark outline
         )
-        main_layout.add_widget(title)
+        title_box.add_widget(title)
+        main_layout.add_widget(title_box)
         
-        # Stats container
+        # Stats container (with dark plate for readability)
+        stats_box = BoxLayout(size_hint_y=0.4, padding=10)
+        with stats_box.canvas.before:
+            Color(0, 0, 0, 0.7)
+            self.stats_rect = RoundedRectangle(pos=stats_box.pos, size=stats_box.size, radius=[15])
+        stats_box.bind(pos=self._update_stats_bg, size=self._update_stats_bg)
+
         stats_layout = GridLayout(
             cols=2,
-            spacing=10,
-            size_hint_y=0.4,
+            spacing=15,
             padding=20
         )
         
-        self.final_level_label = Label(text='Level Reached: 1', font_size='20sp')
-        self.final_time_label = Label(text='Time Survived: 00:00', font_size='20sp')
-        self.score_label = Label(text='Final Score: 0', font_size='20sp')
-        self.gold_earned_label = Label(text='Gold Earned: 0', font_size='20sp')
+        # Use premium styling for the text
+        stats_kwargs = {
+            'font_size': '24sp',
+            'bold': True,
+            'outline_width': 2,
+            'outline_color': (0, 0, 0, 1)
+        }
+        
+        self.final_level_label = Label(text='Level Reached: 1', color=(1, 0.9, 0.4, 1), **stats_kwargs)
+        self.final_time_label = Label(text='Time Survived: 00:00', color=(1, 1, 1, 1), **stats_kwargs)
+        self.score_label = Label(text='Final Score: 0', color=(0.5, 0.8, 1, 1), **stats_kwargs)
+        self.gold_earned_label = Label(text='Gold Earned: 0', color=(1, 0.84, 0, 1), **stats_kwargs)
         
         stats_layout.add_widget(self.final_level_label)
         stats_layout.add_widget(self.final_time_label)
         stats_layout.add_widget(self.score_label)
         stats_layout.add_widget(self.gold_earned_label)
-        
-        main_layout.add_widget(stats_layout)
+        stats_box.add_widget(stats_layout)
+        main_layout.add_widget(stats_box)
         
         # Buttons container
         buttons_layout = BoxLayout(
             orientation='horizontal',
-            spacing=20,
+            spacing=40,
             size_hint_y=0.2,
-            padding=10
+            padding=[50, 10, 50, 10]
         )
         
+        def _update_btn_rect(instance, value):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+            
         restart_btn = Button(
-            text='TRY AGAIN',
-            font_size='24sp',
-            background_color=(0.2, 0.8, 0.2, 1)
+            text='[b]TRY AGAIN[/b]',
+            font_size='26sp',
+            markup=True,
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
+        with restart_btn.canvas.before:
+            Color(0.15, 0.65, 0.25, 0.85) # Premium green
+            restart_btn.bg_rect = RoundedRectangle(pos=restart_btn.pos, size=restart_btn.size, radius=[25])
+        restart_btn.bind(pos=_update_btn_rect, size=_update_btn_rect)
         restart_btn.bind(on_press=self.callback_manager.on_restart_game)
         
         menu_btn = Button(
-            text='MAIN MENU',
-            font_size='24sp',
-            background_color=(0.3, 0.3, 0.8, 1)
+            text='[b]MAIN MENU[/b]',
+            font_size='26sp',
+            markup=True,
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
+        with menu_btn.canvas.before:
+            Color(0.2, 0.4, 0.8, 0.85) # Premium blue
+            menu_btn.bg_rect = RoundedRectangle(pos=menu_btn.pos, size=menu_btn.size, radius=[25])
+        menu_btn.bind(pos=_update_btn_rect, size=_update_btn_rect)
         menu_btn.bind(on_press=self.callback_manager.on_return_to_menu)
         
         buttons_layout.add_widget(restart_btn)
@@ -886,7 +975,7 @@ class GameOverScreen(Screen):
         main_layout.add_widget(buttons_layout)
         self.add_widget(main_layout)
         
-        # Music Credit Label (Bottom Right)
+        # Music Credit Label
         music_credit = Label(
             text='Music track: Fallen Kingdom by Epic Spectrum\nSource: [u]https://freetouse.com/music[/u]\nCopyright Free Music (Free Download)',
             font_size='12sp',
@@ -896,8 +985,25 @@ class GameOverScreen(Screen):
             halign='right',
             valign='bottom',
             pos_hint={'right': 1, 'bottom': 1},
-            color=(1, 1, 1, 0.6) # Semi-transparent
+            color=(1, 1, 1, 0.9),
+            outline_width=1,
+            outline_color=(0,0,0,1)
         )
         music_credit.bind(size=music_credit.setter('text_size'))
         self.add_widget(music_credit)
 
+    def _update_stats_bg(self, instance, value):
+        self.stats_rect.pos = instance.pos
+        self.stats_rect.size = instance.size
+
+    def _update_bg(self, instance, value):
+        self.bg_rect.pos = instance.pos
+        self.bg_rect.size = instance.size
+        # Update tex_coords to repeat the texture based on screen size
+        if hasattr(self, 'bg_texture') and self.bg_texture:
+            tw = self.bg_texture.width
+            th = self.bg_texture.height
+            if tw > 0 and th > 0:
+                w = instance.width / (tw * 2.0)
+                h = instance.height / (th * 2.0)
+                self.bg_rect.tex_coords = (0, 0, w, 0, w, h, 0, h)
