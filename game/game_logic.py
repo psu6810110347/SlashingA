@@ -52,6 +52,7 @@ class GameManager:
         """Calculate and queue the next wave of enemies"""
         self.wave_number += 1
         self._boss_spawned_this_wave = False
+        self.perks_spawned_in_wave = 0
         
         # Base wave is 5. Increase by 2 for every 2 minutes (120 seconds)
         time_elapsed = self.time_manager.elapsed_time
@@ -142,6 +143,7 @@ class GameManager:
         }
         self.add_log("A Perk Orb has appeared!")
         self.active_perks.append(perk)
+        self.perks_spawned_in_wave += 1
     
     def player_attack(self):
         """Handle player attack"""
@@ -313,9 +315,9 @@ class GameManager:
         """Get current game state"""
         self.time_manager.update()
         
-        # Check if we should spawn a perk (every 5 seconds for testing)
+        # Check if we should spawn a perk (Every 15 seconds, limit 2 per wave)
         current_time = self.time_manager.elapsed_time
-        if current_time - self.last_perk_spawn_time >= 5.0:
+        if current_time - self.last_perk_spawn_time >= 15.0 and self.perks_spawned_in_wave < 2:
             self.spawn_perk()
             self.last_perk_spawn_time = current_time
             
