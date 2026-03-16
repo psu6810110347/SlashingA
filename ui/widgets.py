@@ -22,63 +22,180 @@ class MainMenuScreen(Screen):
     def __init__(self, callback_manager, **kwargs):
         super(MainMenuScreen, self).__init__(**kwargs)
         
+        # Add tiled background image
+        from kivy.graphics import Color, Rectangle, RoundedRectangle
+        from kivy.core.image import Image as CoreImage
+        
+        self.bg_texture = None
+        try:
+            # We use the isolated grass_tile.png so it isn't an entire squished spritesheet
+            self.bg_texture = CoreImage('images/backgrounds/grass_tile.png').texture
+            self.bg_texture.wrap = 'repeat'
+            self.bg_texture.mag_filter = 'nearest' # Keep pixel art crisp
+        except Exception:
+            pass
+
+        with self.canvas.before:
+            Color(1, 1, 1, 1) # White so image shows naturally
+            if self.bg_texture:
+                self.bg_rect = Rectangle(texture=self.bg_texture, pos=self.pos, size=self.size)
+            else:
+                self.bg_rect = Rectangle(source='images/backgrounds/ground.png', pos=self.pos, size=self.size)
+            
+            # Add some decorative trees and rocks to the menu background
+            import random
+            from kivy.core.image import Image as CoreImage
+            random.seed(42) # Fixed seed so they don't jump around on resize
+            
+            # Load tree texture and calculate a single frame's coordinates
+            tree_tex = None
+            try:
+                tree_img = CoreImage('images/decorations/tree.png')
+                # Grab just a static 192x256 region from the source image texture to prevent animation
+                # The tree sprite sheet is 1536 width. It has 8 frames, so each frame is 192px wide.
+                tree_tex = tree_img.texture.get_region(0, 0, 192, tree_img.height)
+            except Exception:
+                pass
+            
+            # Draw 15 random trees
+            for _ in range(15):
+                x = random.randint(-50, 1300)
+                y = random.randint(-50, 750)
+                size_variation = random.uniform(0.8, 1.2)
+                tree_w = 192 * size_variation
+                tree_h = 256 * size_variation
+                if tree_tex:
+                    Rectangle(texture=tree_tex, pos=(x, y), size=(tree_w, tree_h))
+                else:
+                    Rectangle(source='images/decorations/tree.png', pos=(x, y), size=(tree_w, tree_h))
+                
+            # Draw 10 random rocks (only rock1 and rock2 exist in folders)
+            for _ in range(10):
+                x = random.randint(0, 1280)
+                y = random.randint(0, 720)
+                rock_type = random.choice([1, 2])
+                rsize = random.randint(30, 60)
+                Rectangle(source=f'images/decorations/rock{rock_type}.png', pos=(x, y), size=(rsize, rsize))
+            
+        self.bind(pos=self._update_bg, size=self._update_bg)
+
         # Create main layout
         main_layout = BoxLayout(
             orientation='vertical',
-            padding=10,
-            spacing=20
+            padding=50,
+            spacing=30
         )
         
-        # Title
+        # Title (with outline instead of dark plate)
+        title_box = BoxLayout(size_hint_y=0.4, padding=10)
         title = Label(
             text='[b]SlashingA[/b]',
-            font_size='48sp',
+            font_size='100sp',
             markup=True,
-            size_hint_y=0.3
+            color=(1.0, 0.85, 0.2, 1), # Bright Gold
+            outline_width=4,
+            outline_color=(0.1, 0.1, 0.1, 1) # Dark outline
         )
-        main_layout.add_widget(title)
+        title_box.add_widget(title)
+        main_layout.add_widget(title_box)
         
-        # Controls Information
+        # Controls Information (with outline)
+        controls_box = BoxLayout(size_hint_y=0.2, padding=10)
         controls_label = Label(
-            text='[b]How to Play:[/b]\nW, A, S, D - Move\nLeft Mouse Click - Attack\nP - Pause Game\nESC - Main Menu',
-            font_size='18sp',
+            text='[b]CONTROLS[/b]\n[color=cccccc]W A S D[/color] to Move  |  [color=cccccc]Left Click[/color] to Slash\n[color=cccccc]P[/color] to Pause  |  [color=cccccc]ESC[/color] for Menu',
+            font_size='22sp',
             markup=True,
             halign='center',
-            size_hint_y=0.2
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
-        main_layout.add_widget(controls_label)
+        controls_box.add_widget(controls_label)
+        main_layout.add_widget(controls_box)
         
         # Buttons container
         button_container = BoxLayout(
             orientation='vertical',
-            size_hint_y=0.5,
-            spacing=15,
-            padding=20
+            size_hint_y=0.4,
+            spacing=25,
+            padding=[300, 10, 300, 40] # Very squeezed horizontal for wide pill buttons
         )
         
+        def _update_btn_rect(instance, value):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+
         # Start button
         start_btn = Button(
-            text='START GAME',
-            font_size='24sp',
-            size_hint_y=0.4,
-            background_color=(0.2, 0.8, 0.2, 1)
+            text='[b]START ADVENTURE[/b]',
+            font_size='26sp',
+            markup=True,
+            size_hint_y=0.5,
+            background_normal='',
+            background_color=(0, 0, 0, 0), # Transparent so we see the canvas below
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
+        with start_btn.canvas.before:
+            Color(0.15, 0.65, 0.25, 0.85) # Premium green
+            start_btn.bg_rect = RoundedRectangle(pos=start_btn.pos, size=start_btn.size, radius=[25])
+        start_btn.bind(pos=_update_btn_rect, size=_update_btn_rect)
         start_btn.bind(on_press=callback_manager.on_start_game)
         button_container.add_widget(start_btn)
         
         # Quit button
         quit_btn = Button(
-            text='QUIT',
-            font_size='24sp',
-            size_hint_y=0.4,
-            background_color=(0.8, 0.2, 0.2, 1)
+            text='[b]EXIT REALM[/b]',
+            font_size='26sp',
+            markup=True,
+            size_hint_y=0.5,
+            background_normal='',
+            background_color=(0, 0, 0, 0), # Transparent
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
+        with quit_btn.canvas.before:
+            Color(0.8, 0.15, 0.15, 0.85) # Premium red
+            quit_btn.bg_rect = RoundedRectangle(pos=quit_btn.pos, size=quit_btn.size, radius=[25])
+        quit_btn.bind(pos=_update_btn_rect, size=_update_btn_rect)
         quit_btn.bind(on_press=callback_manager.on_quit_game)
         button_container.add_widget(quit_btn)
         
         main_layout.add_widget(button_container)
         self.add_widget(main_layout)
+        
+        # Music Credit Label
+        music_credit = Label(
+            text='Music track: Ballad by Pufino\nSource: [u]https://freetouse.com/music[/u]\nRoyalty Free Music for Video (Safe)',
+            font_size='12sp',
+            markup=True,
+            size_hint=(None, None),
+            size=(300, 60),
+            halign='right',
+            valign='bottom',
+            pos_hint={'right': 1, 'bottom': 1},
+            color=(1, 1, 1, 0.9),
+            outline_width=1,
+            outline_color=(0,0,0,1)
+        )
+        music_credit.bind(size=music_credit.setter('text_size'))
+        self.add_widget(music_credit)
 
+    def _update_bg(self, instance, value):
+        self.bg_rect.pos = instance.pos
+        self.bg_rect.size = instance.size
+        
+        # Update tex_coords to repeat the texture based on screen size
+        if hasattr(self, 'bg_texture') and self.bg_texture:
+            tw = self.bg_texture.width
+            th = self.bg_texture.height
+            if tw > 0 and th > 0:
+                # Scale by 2.0 to make the tiles slightly larger/prettier, similar to pixel art styling
+                w = instance.width / (tw * 2.0)
+                h = instance.height / (th * 2.0)
+                self.bg_rect.tex_coords = (0, 0, w, 0, w, h, 0, h)
 
 class GameScreen(Screen):
     """Main game play screen"""
@@ -87,6 +204,11 @@ class GameScreen(Screen):
         
         # Create main layout (FloatLayout to allow overlaying)
         main_layout = FloatLayout()
+        
+        # Dedicated game world layer (Bottom-most)
+        from kivy.uix.widget import Widget
+        self.game_world = Widget(size_hint=(1, 1))
+        main_layout.add_widget(self.game_world)
         
         # Track which enemy index is focused in the detail overlay
         self.enemy_detail_index = 0
@@ -107,6 +229,13 @@ class GameScreen(Screen):
             spacing=4,
             padding=5
         )
+        
+        # Add background to HUD
+        from kivy.graphics import Color, Rectangle
+        with hud.canvas.before:
+            Color(0, 0, 0, 0.7) # Darker for better contrast
+            hud.bg_rect = Rectangle(pos=hud.pos, size=hud.size)
+        hud.bind(pos=self._update_hud_bg, size=self._update_hud_bg)
 
         # First row: basic stats + enemy detail button (top-right)
         top_row = BoxLayout(
@@ -178,6 +307,12 @@ class GameScreen(Screen):
             spacing=2
         )
         
+        # Add background to Stat Panel
+        with self.stat_panel.canvas.before:
+            Color(0, 0, 0, 0.6) # Darker for better contrast
+            self.stat_panel.bg_rect = Rectangle(pos=self.stat_panel.pos, size=self.stat_panel.size)
+        self.stat_panel.bind(pos=self._update_stat_bg, size=self._update_stat_bg)
+        
         stat_title = Label(text='[b]PLAYER STATS[/b]', markup=True, font_size='16sp', size_hint_y=None, height=40)
         self.side_hp_label = Label(text='HP: 100/100', font_size='14sp', size_hint_y=None, height=20)
         self.side_atk_label = Label(text='Attack: 10', font_size='14sp', size_hint_y=None, height=20)
@@ -246,6 +381,12 @@ class GameScreen(Screen):
             size_hint_x=0.85
         )
         
+        # Right Side: Game Canvas and Controls
+        right_area = BoxLayout(
+            orientation='vertical',
+            size_hint_x=0.85
+        )
+        
         # Game canvas area
         self.game_canvas = BoxLayout(
             orientation='vertical',
@@ -287,7 +428,30 @@ class GameScreen(Screen):
         self.perk_overlay.disabled = True
         main_layout.add_widget(self.perk_overlay)
         
+        # Music Credit Label (Bottom Right)
+        music_credit = Label(
+            text='Music track: Guardian of the Former Seas by DM DOKURO',
+            font_size='12sp',
+            markup=True,
+            size_hint=(None, None),
+            size=(400, 30),
+            halign='right',
+            valign='bottom',
+            pos_hint={'right': 1, 'bottom': 1},
+            color=(1, 1, 1, 0.6) # Semi-transparent
+        )
+        music_credit.bind(size=music_credit.setter('text_size'))
+        main_layout.add_widget(music_credit)
+        
         self.add_widget(main_layout)
+
+    def _update_hud_bg(self, instance, value):
+        instance.bg_rect.pos = instance.pos
+        instance.bg_rect.size = instance.size
+
+    def _update_stat_bg(self, instance, value):
+        instance.bg_rect.pos = instance.pos
+        instance.bg_rect.size = instance.size
 
     def toggle_enemy_detail_overlay(self):
         """Toggle enemy detail overlay using Tab key, pause/unpause game like perk selection"""
@@ -381,7 +545,7 @@ class PerkSelectionOverlay(BoxLayout):
         # Background color to dim the screen
         from kivy.graphics import Color, Rectangle
         with self.canvas.before:
-            Color(0, 0, 0, 0.8) # semi-transparent black
+            self.bg_color = Color(0, 0, 0, 0.85) # Very dark semi-transparent black
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
         
@@ -531,14 +695,14 @@ class EnemyDetailOverlay(BoxLayout):
     def _populate_codex(self):
         """Populate the codex with enemy types that actually appear in the game."""
         enemy_types = [
-            {'name': 'Normal', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Red',
-             'desc': 'A standard red enemy. Fast and aggressive melee attacker.'},
-            {'name': 'Tank', 'hp': 20, 'attack': 10, 'speed': 3, 'color': 'Orange',
-             'desc': 'An orange enemy with more HP. Slower but tougher to kill.'},
-            {'name': 'Shooter', 'hp': 10, 'attack': 10, 'speed': 4, 'color': 'Purple',
-             'desc': 'A purple ranged enemy that fires yellow projectiles at you.'},
-            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'color': 'Dark Red',
-             'desc': 'A mighty Boss that spawns every 5 minutes. Very high HP and damage.'}
+            {'name': 'Knight', 'hp': 10, 'attack': 10, 'speed': 4, 'type': 'Warrior',
+             'desc': 'A brave soldier of the Red Kingdom. Aggressive and skilled in close-range sword combat.'},
+            {'name': 'Lancer', 'hp': 20, 'attack': 10, 'speed': 3, 'type': 'Vanguard',
+             'desc': 'A heavily armored lancer. Their long reach and high defense make them formidable front-line units.'},
+            {'name': 'Archer', 'hp': 10, 'attack': 10, 'speed': 4, 'type': 'Ranged',
+             'desc': 'A precision shooter who supports from afar. They fire deadly arrows with a balanced attack rate.'},
+            {'name': 'Boss', 'hp': 150, 'attack': 18, 'speed': 3, 'type': 'Elite',
+             'desc': 'A legendary commander of the Red Legion. Boasts massive HP and devastating special attacks.'}
         ]
 
         for enemy in enemy_types:
@@ -551,7 +715,7 @@ class EnemyDetailOverlay(BoxLayout):
                 entry.bg_rect = Rectangle(size=entry.size, pos=entry.pos)
             entry.bind(size=self._update_entry_bg, pos=self._update_entry_bg)
 
-            name_lbl = Label(text=f"[b]{enemy['name']}[/b]  ({enemy['color']})", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
+            name_lbl = Label(text=f"[b]{enemy['name']}[/b]  ({enemy['type']})", markup=True, font_size='18sp', size_hint_y=0.3, halign='left')
             name_lbl.bind(size=name_lbl.setter('text_size'))
             stats_lbl = Label(text=f"HP: {enemy['hp']}  |  Attack: {enemy['attack']}  |  Speed: {enemy['speed']}", font_size='14sp', size_hint_y=0.3, halign='left')
             stats_lbl.bind(size=stats_lbl.setter('text_size'))
@@ -659,61 +823,150 @@ class GameOverScreen(Screen):
         super(GameOverScreen, self).__init__(**kwargs)
         self.callback_manager = callback_manager
         
+        # Add tiled background image and decorations (same as main menu)
+        from kivy.graphics import Color, Rectangle, RoundedRectangle
+        from kivy.core.image import Image as CoreImage
+        import random
+        
+        self.bg_texture = None
+        try:
+            self.bg_texture = CoreImage('images/backgrounds/grass_tile.png').texture
+            self.bg_texture.wrap = 'repeat'
+            self.bg_texture.mag_filter = 'nearest'
+        except Exception:
+            pass
+
+        with self.canvas.before:
+            Color(1, 1, 1, 1) # White so image shows naturally
+            if self.bg_texture:
+                self.bg_rect = Rectangle(texture=self.bg_texture, pos=self.pos, size=self.size)
+            else:
+                self.bg_rect = Rectangle(source='images/backgrounds/ground.png', pos=self.pos, size=self.size)
+            
+            # Add some decorative trees and rocks
+            random.seed(99) # Different seed from menu so it looks slightly different
+            
+            tree_tex = None
+            try:
+                tree_img = CoreImage('images/decorations/tree.png')
+                tree_tex = tree_img.texture.get_region(0, 0, 192, tree_img.height)
+            except Exception:
+                pass
+            
+            for _ in range(15):
+                x = random.randint(-50, 1300)
+                y = random.randint(-50, 750)
+                size_variation = random.uniform(0.8, 1.2)
+                tree_w = 192 * size_variation
+                tree_h = 256 * size_variation
+                if tree_tex:
+                    Rectangle(texture=tree_tex, pos=(x, y), size=(tree_w, tree_h))
+                else:
+                    Rectangle(source='images/decorations/tree.png', pos=(x, y), size=(tree_w, tree_h))
+                
+            for _ in range(10):
+                x = random.randint(0, 1280)
+                y = random.randint(0, 720)
+                rock_type = random.choice([1, 2])
+                rsize = random.randint(30, 60)
+                Rectangle(source=f'images/decorations/rock{rock_type}.png', pos=(x, y), size=(rsize, rsize))
+            
+        self.bind(pos=self._update_bg, size=self._update_bg)
+        
         main_layout = BoxLayout(
             orientation='vertical',
-            padding=20,
-            spacing=10
+            padding=50,
+            spacing=30
         )
         
         # Game Over Title
+        title_box = BoxLayout(size_hint_y=0.3, padding=10)
         title = Label(
-            text='[color=ff0000][b]GAME OVER[/b][/color]',
-            font_size='48sp',
+            text='[b]GAME OVER[/b]',
+            font_size='100sp',
             markup=True,
-            size_hint_y=0.2
+            color=(0.9, 0.1, 0.1, 1), # Bright Red
+            outline_width=4,
+            outline_color=(0.1, 0.1, 0.1, 1) # Dark outline
         )
-        main_layout.add_widget(title)
+        title_box.add_widget(title)
+        main_layout.add_widget(title_box)
         
-        # Stats container
+        # Stats container (with dark plate for readability)
+        stats_box = BoxLayout(size_hint_y=0.4, padding=10)
+        with stats_box.canvas.before:
+            Color(0, 0, 0, 0.7)
+            self.stats_rect = RoundedRectangle(pos=stats_box.pos, size=stats_box.size, radius=[15])
+        stats_box.bind(pos=self._update_stats_bg, size=self._update_stats_bg)
+
         stats_layout = GridLayout(
             cols=2,
-            spacing=10,
-            size_hint_y=0.4,
+            spacing=15,
             padding=20
         )
         
-        self.final_level_label = Label(text='Level Reached: 1', font_size='20sp')
-        self.final_time_label = Label(text='Time Survived: 00:00', font_size='20sp')
-        self.score_label = Label(text='Final Score: 0', font_size='20sp')
-        self.gold_earned_label = Label(text='Gold Earned: 0', font_size='20sp')
+        # Use premium styling for the text
+        stats_kwargs = {
+            'font_size': '24sp',
+            'bold': True,
+            'outline_width': 2,
+            'outline_color': (0, 0, 0, 1)
+        }
+        
+        self.final_level_label = Label(text='Level Reached: 1', color=(1, 0.9, 0.4, 1), **stats_kwargs)
+        self.final_time_label = Label(text='Time Survived: 00:00', color=(1, 1, 1, 1), **stats_kwargs)
+        self.score_label = Label(text='Final Score: 0', color=(0.5, 0.8, 1, 1), **stats_kwargs)
+        self.gold_earned_label = Label(text='Gold Earned: 0', color=(1, 0.84, 0, 1), **stats_kwargs)
         
         stats_layout.add_widget(self.final_level_label)
         stats_layout.add_widget(self.final_time_label)
         stats_layout.add_widget(self.score_label)
         stats_layout.add_widget(self.gold_earned_label)
-        
-        main_layout.add_widget(stats_layout)
+        stats_box.add_widget(stats_layout)
+        main_layout.add_widget(stats_box)
         
         # Buttons container
         buttons_layout = BoxLayout(
             orientation='horizontal',
-            spacing=20,
+            spacing=40,
             size_hint_y=0.2,
-            padding=10
+            padding=[50, 10, 50, 10]
         )
         
+        def _update_btn_rect(instance, value):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+            
         restart_btn = Button(
-            text='TRY AGAIN',
-            font_size='24sp',
-            background_color=(0.2, 0.8, 0.2, 1)
+            text='[b]TRY AGAIN[/b]',
+            font_size='26sp',
+            markup=True,
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
+        with restart_btn.canvas.before:
+            Color(0.15, 0.65, 0.25, 0.85) # Premium green
+            restart_btn.bg_rect = RoundedRectangle(pos=restart_btn.pos, size=restart_btn.size, radius=[25])
+        restart_btn.bind(pos=_update_btn_rect, size=_update_btn_rect)
         restart_btn.bind(on_press=self.callback_manager.on_restart_game)
         
         menu_btn = Button(
-            text='MAIN MENU',
-            font_size='24sp',
-            background_color=(0.3, 0.3, 0.8, 1)
+            text='[b]MAIN MENU[/b]',
+            font_size='26sp',
+            markup=True,
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            color=(1, 1, 1, 1),
+            outline_width=2,
+            outline_color=(0, 0, 0, 1)
         )
+        with menu_btn.canvas.before:
+            Color(0.2, 0.4, 0.8, 0.85) # Premium blue
+            menu_btn.bg_rect = RoundedRectangle(pos=menu_btn.pos, size=menu_btn.size, radius=[25])
+        menu_btn.bind(pos=_update_btn_rect, size=_update_btn_rect)
         menu_btn.bind(on_press=self.callback_manager.on_return_to_menu)
         
         buttons_layout.add_widget(restart_btn)
@@ -721,4 +974,36 @@ class GameOverScreen(Screen):
         
         main_layout.add_widget(buttons_layout)
         self.add_widget(main_layout)
+        
+        # Music Credit Label
+        music_credit = Label(
+            text='Music track: Fallen Kingdom by Epic Spectrum\nSource: [u]https://freetouse.com/music[/u]\nCopyright Free Music (Free Download)',
+            font_size='12sp',
+            markup=True,
+            size_hint=(None, None),
+            size=(300, 60),
+            halign='right',
+            valign='bottom',
+            pos_hint={'right': 1, 'bottom': 1},
+            color=(1, 1, 1, 0.9),
+            outline_width=1,
+            outline_color=(0,0,0,1)
+        )
+        music_credit.bind(size=music_credit.setter('text_size'))
+        self.add_widget(music_credit)
 
+    def _update_stats_bg(self, instance, value):
+        self.stats_rect.pos = instance.pos
+        self.stats_rect.size = instance.size
+
+    def _update_bg(self, instance, value):
+        self.bg_rect.pos = instance.pos
+        self.bg_rect.size = instance.size
+        # Update tex_coords to repeat the texture based on screen size
+        if hasattr(self, 'bg_texture') and self.bg_texture:
+            tw = self.bg_texture.width
+            th = self.bg_texture.height
+            if tw > 0 and th > 0:
+                w = instance.width / (tw * 2.0)
+                h = instance.height / (th * 2.0)
+                self.bg_rect.tex_coords = (0, 0, w, 0, w, h, 0, h)

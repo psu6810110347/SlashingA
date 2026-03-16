@@ -71,10 +71,10 @@ class Enemy:
         }
 
 
-class NormalEnemy(Enemy):
-    """Normal enemy type (Knight)"""
+class KnightEnemy(Enemy):
+    """Knight enemy type (formerly Normal)"""
     def __init__(self, scaling_factor=0):
-        super().__init__("Normal", 1)
+        super().__init__("Knight", 1)
         self.hp = 10 + (scaling_factor * 10)
         self.max_hp = self.hp
         self.attack = 10 + (scaling_factor * 5)
@@ -83,10 +83,10 @@ class NormalEnemy(Enemy):
         self.attack_range = 80
 
 
-class TankEnemy(Enemy):
-    """Tank enemy type (Lancer)"""
+class LancerEnemy(Enemy):
+    """Lancer enemy type (formerly Tank)"""
     def __init__(self, scaling_factor=0):
-        super().__init__("Tank", 1)
+        super().__init__("Lancer", 1)
         self.hp = 20 + (scaling_factor * 10)
         self.max_hp = self.hp
         self.attack = 10 + (scaling_factor * 5)
@@ -95,10 +95,10 @@ class TankEnemy(Enemy):
         self.attack_range = 90
 
 
-class ShooterEnemy(Enemy):
-    """Shooter enemy type (Archer)"""
+class ArcherEnemy(Enemy):
+    """Archer enemy type (formerly Shooter)"""
     def __init__(self, scaling_factor=0):
-        super().__init__("Shooter", 1)
+        super().__init__("Archer", 1)
         self.hp = 10 + (scaling_factor * 10)
         self.max_hp = self.hp
         self.attack = 10 + (scaling_factor * 5)
