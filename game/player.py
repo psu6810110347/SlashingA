@@ -21,10 +21,16 @@ class Player:
         self.defense = 0
         self.speed = 5
         self.gold = 0
+        self.score = 0
         self.inventory = []
         self.skills = []
         self.position = [0, 0]
         self.is_alive = True
+        
+        # Hitbox and Ranges
+        self.hitbox_radius = 45
+        self.attack_range = 100
+        self.collection_radius = 60
     
     def take_damage(self, damage):
         """Take damage"""
@@ -53,32 +59,18 @@ class Player:
     def level_up(self):
         """Level up"""
         self.level += 1
-        self.max_hp += 10
-        self.hp = self.max_hp
-        self.max_mp += 5
-        self.mp = self.max_mp
+        self.max_hp += 7
+        self.hp += 7 # slightly buffed from 5 to 7 for better survival
         self.attack += 2
-        self.defense += 1
-        self.exp_to_level = int(self.exp_to_level * 1.1)
+        # Defense increases every 2 levels to prevent invulnerability
+        if self.level % 2 == 0:
+            self.defense += 1
+        self.exp_to_level = int(self.exp_to_level * 1.3) # Faster scaling of EXP requirements
         print(f"{self.name} leveled up to {self.level}!")
-    
-    def add_item(self, item):
-        """Add item to inventory"""
-        self.inventory.append(item)
-    
-    def remove_item(self, item):
-        """Remove item from inventory"""
-        if item in self.inventory:
-            self.inventory.remove(item)
     
     def add_gold(self, amount):
         """Add gold"""
         self.gold += amount
-    
-    def learn_skill(self, skill):
-        """Learn new skill"""
-        if skill not in self.skills:
-            self.skills.append(skill)
     
     def move(self, x, y):
         """Move player"""
@@ -91,9 +83,13 @@ class Player:
             'level': self.level,
             'exp': self.exp,
             'hp': self.hp,
-            'max_hp': self.max_hp,
+            'max_hp': self.max_hp,          
             'attack': self.attack,
             'defense': self.defense,
             'speed': self.speed,
             'gold': self.gold,
+            'score': self.score,
+            'pos': self.position,
+            'hitbox_radius': self.hitbox_radius,
+            'attack_range': self.attack_range,
         }
