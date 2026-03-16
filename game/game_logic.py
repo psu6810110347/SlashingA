@@ -157,7 +157,7 @@ class GameManager:
         for enemy in self.enemies:
             ex, ey = enemy.position
             dist = ((px - ex)**2 + (py - ey)**2)**0.5
-            if dist < min_dist and dist <= 60:
+            if dist < min_dist and dist <= enemy.hitbox_radius:
                 min_dist = dist
                 closest_enemy = enemy
                 
@@ -191,7 +191,7 @@ class GameManager:
         for enemy in self.enemies:
             ex, ey = enemy.position
             dist = ((px - ex)**2 + (py - ey)**2)**0.5
-            if dist <= 100: # Wider AOE range
+            if dist <= enemy.hitbox_radius * 1.5: # Wider AOE range
                 hit_enemies.append(enemy)
                 
         for enemy in hit_enemies:
@@ -330,13 +330,8 @@ class GameManager:
         if self.wave_number > 0 and self.wave_number % 10 == 0:
             # Only spawn boss once per wave milestone
             if not getattr(self, '_boss_spawned_this_wave', False):
-                if self.callback_manager and self.callback_manager.app and self.callback_manager.app.root:
-                    widget_count = self.count_total_widgets(self.callback_manager.app.root)
-                    callback_count = self.count_callbacks()
-                    self.add_log(f"Verification Check: Widgets={widget_count}/30, Callbacks={callback_count}/10")
-                    if widget_count >= 30 and callback_count >= 10:
-                        self.spawn_boss()
-                        self._boss_spawned_this_wave = True
+                self.spawn_boss()
+                self._boss_spawned_this_wave = True
             
         # Enemy Staggered Spawning logic
         # Spawn an enemy every 1.5 seconds if there are enemies left in the queue
