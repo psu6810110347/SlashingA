@@ -59,7 +59,7 @@ class GameManager:
                 size = (random.randint(150, 220), random.randint(150, 220))
             else: # tree
                 size = (random.randint(250, 350), random.randint(250, 350))
-
+                
             # Attempt to find a non-overlapping spot (max 10 tries)
             for _ in range(10):
                 dx = random.randint(50, 1200)
@@ -88,6 +88,7 @@ class GameManager:
         """Calculate and queue the next wave of enemies"""
         self.wave_number += 1
         self._boss_spawned_this_wave = False
+        self.perks_spawned_in_wave = 0
         
         # Base wave is 5. Increase by 2 for every 2 minutes (120 seconds)
         time_elapsed = self.time_manager.elapsed_time
@@ -121,8 +122,9 @@ class GameManager:
         return count
 
     def spawn_boss(self):
-        """Spawn the Boss enemy with scaling based on elapsed time"""
-        scaling_factor = int(self.time_manager.elapsed_time // 300)
+        """Spawn the Boss enemy with scaling based on time and waves"""
+        # Relaxed scaling: every 120s + factor of wave
+        scaling_factor = int(self.time_manager.elapsed_time // 120) + (self.wave_number // 3)
         boss = Boss(scaling_factor)
         # Spawn off-screen
         spawn_x = random.randint(0, 1280)
@@ -134,12 +136,12 @@ class GameManager:
             self.callback_manager.on_boss_spawn(self.wave_number)
 
     def spawn_enemy(self):
-        """Spawn random enemy off-screen and scale based on time elapsed"""
+        """Spawn random enemy with scaling based on time and waves"""
         enemy_types = [KnightEnemy, LancerEnemy, ArcherEnemy]
         enemy_class = random.choice(enemy_types)
         
-        # Scale stats: 1 factor for every 5 minutes (300 seconds)
-        scaling_factor = int(self.time_manager.elapsed_time // 300)
+        # Relaxed scaling: time factor (every 120s) + wave factor (every 3 waves)
+        scaling_factor = int(self.time_manager.elapsed_time // 120) + (self.wave_number // 3)
         new_enemy = enemy_class(scaling_factor)
         
         # Spawn off-screen safely outside the Window borders (1280x720 + margins)
@@ -178,6 +180,7 @@ class GameManager:
         }
         self.add_log("A Perk Orb has appeared!")
         self.active_perks.append(perk)
+        self.perks_spawned_in_wave += 1
     
     def player_attack(self, is_facing_right=True):
         """Handle player attack with directional check"""
@@ -196,11 +199,9 @@ class GameManager:
             dy = ey - py
             dist = (dx**2 + dy**2)**0.5
             
-            # Distance check
-            if dist <= self.player.attack_range:
+            # Use the balanced reach (Player Attack Range + Enemy Hitbox)
+            if dist <= (self.player.attack_range + enemy.hitbox_radius):
                 # Directional check: enemy must be in a forward 180-degree arc
-                # If facing right, dx should be positive (or slightly behind for the back of the swing).
-                # If facing left, dx should be negative.
                 # We allow a much more generous arc (-30px) to simulate a wide sword slash
                 is_in_front = (is_facing_right and dx > -30) or (not is_facing_right and dx < 30)
                 
@@ -238,7 +239,8 @@ class GameManager:
         for enemy in self.enemies:
             ex, ey = enemy.position
             dist = ((px - ex)**2 + (py - ey)**2)**0.5
-            if dist <= self.player.attack_range * 1.5: # Wider AOE range
+            # Use dynamic hitbox_radius + Skill Reach for skill range
+            if dist <= (self.player.attack_range * 1.5 + enemy.hitbox_radius): 
                 hit_enemies.append(enemy)
                 
         for enemy in hit_enemies:
@@ -329,8 +331,6 @@ class GameManager:
                         
         return total_damage_taken
 
-
-    
     def defeat_enemy(self, enemy):
         """Handle specific enemy defeat"""
         rewards = enemy.defeat()
@@ -354,7 +354,6 @@ class GameManager:
             # Start the next wave!
             self.start_next_wave()
 
-    
     def player_defeated(self):
         """Handle player defeat"""
         message = "You were defeated! Game Over."
@@ -370,9 +369,9 @@ class GameManager:
         """Get current game state"""
         self.time_manager.update()
         
-        # Check if we should spawn a perk (every 5 seconds for testing)
+        # Check if we should spawn a perk (Every 15 seconds, limit 2 per wave)
         current_time = self.time_manager.elapsed_time
-        if current_time - self.last_perk_spawn_time >= 5.0:
+        if current_time - self.last_perk_spawn_time >= 15.0 and self.perks_spawned_in_wave < 2:
             self.spawn_perk()
             self.last_perk_spawn_time = current_time
             
@@ -383,17 +382,12 @@ class GameManager:
             self.add_log("Survived 5 minutes! +100 Score!")
             self.last_score_interval = score_intervals
             
-        # Check for Boss Spawn (Every 2 waves)
-        if self.wave_number > 0 and self.wave_number % 2 == 0:
+        # Check for Boss Spawn (Every 10 waves)
+        if self.wave_number > 0 and self.wave_number % 10 == 0:
             # Only spawn boss once per wave milestone
             if not getattr(self, '_boss_spawned_this_wave', False):
-                if self.callback_manager and self.callback_manager.app and self.callback_manager.app.root:
-                    widget_count = self.count_total_widgets(self.callback_manager.app.root)
-                    callback_count = self.count_callbacks()
-                    self.add_log(f"Verification Check: Widgets={widget_count}/30, Callbacks={callback_count}/10")
-                    if widget_count >= 30 and callback_count >= 10:
-                        self.spawn_boss()
-                        self._boss_spawned_this_wave = True
+                self.spawn_boss()
+                self._boss_spawned_this_wave = True
             
         # Enemy Staggered Spawning logic
         # Spawn an enemy every 1.5 seconds if there are enemies left in the queue

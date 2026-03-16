@@ -75,11 +75,11 @@ class KnightEnemy(Enemy):
     """Knight enemy type (formerly Normal)"""
     def __init__(self, scaling_factor=0):
         super().__init__("Knight", 1)
-        self.hp = 10 + (scaling_factor * 10)
+        self.hp = 20 + (scaling_factor * 8)
         self.max_hp = self.hp
-        self.attack = 10 + (scaling_factor * 5)
+        self.attack = 12 + (scaling_factor * 4)
         self.speed = 4
-        self.hitbox_radius = 50
+        self.hitbox_radius = 60
         self.attack_range = 80
 
 
@@ -87,37 +87,37 @@ class LancerEnemy(Enemy):
     """Lancer enemy type (formerly Tank)"""
     def __init__(self, scaling_factor=0):
         super().__init__("Lancer", 1)
-        self.hp = 20 + (scaling_factor * 10)
+        self.hp = 50 + (scaling_factor * 20)
         self.max_hp = self.hp
-        self.attack = 10 + (scaling_factor * 5)
+        self.attack = 12 + (scaling_factor * 4)
         self.speed = 3
-        self.hitbox_radius = 100 # Large tank
-        self.attack_range = 90
+        self.hitbox_radius = 90 # Larger hitbox for heavy units
+        self.attack_range = 75
 
 
 class ArcherEnemy(Enemy):
     """Archer enemy type (formerly Shooter)"""
     def __init__(self, scaling_factor=0):
         super().__init__("Archer", 1)
-        self.hp = 10 + (scaling_factor * 10)
+        self.hp = 15 + (scaling_factor * 5)
         self.max_hp = self.hp
-        self.attack = 10 + (scaling_factor * 5)
+        self.attack = 12 + (scaling_factor * 3)
         self.speed = 4
         self.last_shot_time = 0
-        self.hitbox_radius = 50
-        self.attack_range = 300 # Archer range
+        self.hitbox_radius = 60
+        self.attack_range = 300
 
 
 class Boss(Enemy):
     """Boss enemy"""
     def __init__(self, scaling_factor=0):
         super().__init__("Boss", 1)
-        self.hp = 100 + (scaling_factor * 50)
+        self.hp = 500 + (scaling_factor * 100)
         self.max_hp = self.hp
-        self.attack = 15 + (scaling_factor * 5)
-        self.defense = 5 + (scaling_factor * 2)
+        self.attack = 30 + (scaling_factor * 10)
+        self.defense = 10 + (scaling_factor * 5)
         self.speed = 2
         self.exp_reward = 500 + (scaling_factor * 100)
         self.gold_reward = 100 + (scaling_factor * 50)
-        self.hitbox_radius = 180 # Massive boss
+        self.hitbox_radius = 220 # Massive hitbox to match visual scale
         self.attack_range = 150

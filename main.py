@@ -4,21 +4,22 @@ Built with Kivy Framework
 """
 
 from kivy.app import App
+from kivy.config import Config
+# Disable multitouch emulation (removes red circle on right click)
+Config.set('input', 'mouse', 'mouse,disable_multitouch')
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.core.window import Window
 from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle, Ellipse, Rotate, PushMatrix, PopMatrix
-import math
-
-from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup
-from events.callbacks import CallbackManager
-from game.game_logic import GameManager
-from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup, GameOverScreen
 from kivy.core.image import Image as CoreImage
 from kivy.core.audio import SoundLoader
 import os
 import time
 import math
+
+from ui.widgets import MainMenuScreen, GameScreen, PauseMenuPopup, GameOverScreen
+from events.callbacks import CallbackManager
+from game.game_logic import GameManager
 
 # Default Constants for Tiny Swords Asset Pack
 DEFAULT_FRAME_SIZE = 192
@@ -87,6 +88,9 @@ class HackAndSlashApp(App):
     
     def build(self):
         """Build the application"""
+        # Enable fullscreen mode on build for better stability
+        Window.fullscreen = 'auto'
+        
         # Initialize managers
         self.callback_manager = CallbackManager(self)
         self.game_manager = GameManager(callback_manager=self.callback_manager)
