@@ -61,8 +61,6 @@ class Player:
         self.level += 1
         self.max_hp += 7
         self.hp += 7 # slightly buffed from 5 to 7 for better survival
-        self.max_mp += 5
-        self.mp += 5  
         self.attack += 2
         # Defense increases every 2 levels to prevent invulnerability
         if self.level % 2 == 0:
@@ -70,23 +68,9 @@ class Player:
         self.exp_to_level = int(self.exp_to_level * 1.3) # Faster scaling of EXP requirements
         print(f"{self.name} leveled up to {self.level}!")
     
-    def add_item(self, item):
-        """Add item to inventory"""
-        self.inventory.append(item)
-    
-    def remove_item(self, item):
-        """Remove item from inventory"""
-        if item in self.inventory:
-            self.inventory.remove(item)
-    
     def add_gold(self, amount):
         """Add gold"""
         self.gold += amount
-    
-    def learn_skill(self, skill):
-        """Learn new skill"""
-        if skill not in self.skills:
-            self.skills.append(skill)
     
     def move(self, x, y):
         """Move player"""
@@ -99,9 +83,7 @@ class Player:
             'level': self.level,
             'exp': self.exp,
             'hp': self.hp,
-            'max_hp': self.max_hp,
-            'mp': self.mp,
-            'max_mp': self.max_mp,
+            'max_hp': self.max_hp,          
             'attack': self.attack,
             'defense': self.defense,
             'speed': self.speed,
