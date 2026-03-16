@@ -92,8 +92,6 @@ class Player:
             'exp': self.exp,
             'hp': self.hp,
             'max_hp': self.max_hp,
-            'mp': self.mp,
-            'max_mp': self.max_mp,
             'attack': self.attack,
             'defense': self.defense,
             'speed': self.speed,
