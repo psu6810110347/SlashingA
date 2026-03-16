@@ -59,32 +59,18 @@ class Player:
     def level_up(self):
         """Level up"""
         self.level += 1
-        self.max_hp += 10
-        self.hp += 10 # only add 10 HP on level up instead of full heal
-        self.max_mp += 5
-        self.mp += 5  # only add 5 MP on level up instead of full restore
+        self.max_hp += 7
+        self.hp += 7 # slightly buffed from 5 to 7 for better survival
         self.attack += 2
-        self.defense += 1
-        self.exp_to_level = int(self.exp_to_level * 1.1)
+        # Defense increases every 2 levels to prevent invulnerability
+        if self.level % 2 == 0:
+            self.defense += 1
+        self.exp_to_level = int(self.exp_to_level * 1.3) # Faster scaling of EXP requirements
         print(f"{self.name} leveled up to {self.level}!")
-    
-    def add_item(self, item):
-        """Add item to inventory"""
-        self.inventory.append(item)
-    
-    def remove_item(self, item):
-        """Remove item from inventory"""
-        if item in self.inventory:
-            self.inventory.remove(item)
     
     def add_gold(self, amount):
         """Add gold"""
         self.gold += amount
-    
-    def learn_skill(self, skill):
-        """Learn new skill"""
-        if skill not in self.skills:
-            self.skills.append(skill)
     
     def move(self, x, y):
         """Move player"""
@@ -97,9 +83,7 @@ class Player:
             'level': self.level,
             'exp': self.exp,
             'hp': self.hp,
-            'max_hp': self.max_hp,
-            'mp': self.mp,
-            'max_mp': self.max_mp,
+            'max_hp': self.max_hp,          
             'attack': self.attack,
             'defense': self.defense,
             'speed': self.speed,
