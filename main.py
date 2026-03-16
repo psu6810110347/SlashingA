@@ -88,6 +88,9 @@ class HackAndSlashApp(App):
     
     def build(self):
         """Build the application"""
+        # Enable fullscreen mode on build for better stability
+        Window.fullscreen = 'auto'
+        
         # Initialize managers
         self.callback_manager = CallbackManager(self)
         self.game_manager = GameManager(callback_manager=self.callback_manager)

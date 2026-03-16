@@ -122,8 +122,9 @@ class GameManager:
         return count
 
     def spawn_boss(self):
-        """Spawn the Boss enemy with scaling based on elapsed time"""
-        scaling_factor = int(self.time_manager.elapsed_time // 300)
+        """Spawn the Boss enemy with scaling based on time and waves"""
+        # Relaxed scaling: every 120s + factor of wave
+        scaling_factor = int(self.time_manager.elapsed_time // 120) + (self.wave_number // 3)
         boss = Boss(scaling_factor)
         # Spawn off-screen
         spawn_x = random.randint(0, 1280)
@@ -135,12 +136,12 @@ class GameManager:
             self.callback_manager.on_boss_spawn(self.wave_number)
 
     def spawn_enemy(self):
-        """Spawn random enemy off-screen and scale based on time elapsed"""
+        """Spawn random enemy with scaling based on time and waves"""
         enemy_types = [KnightEnemy, LancerEnemy, ArcherEnemy]
         enemy_class = random.choice(enemy_types)
         
-        # Scale stats: 1 factor for every 5 minutes (300 seconds)
-        scaling_factor = int(self.time_manager.elapsed_time // 300)
+        # Relaxed scaling: time factor (every 120s) + wave factor (every 3 waves)
+        scaling_factor = int(self.time_manager.elapsed_time // 120) + (self.wave_number // 3)
         new_enemy = enemy_class(scaling_factor)
         
         # Spawn off-screen safely outside the Window borders (1280x720 + margins)
@@ -198,8 +199,8 @@ class GameManager:
             dy = ey - py
             dist = (dx**2 + dy**2)**0.5
             
-            # Use the balanced hitbox_radius for the check
-            if dist <= enemy.hitbox_radius:
+            # Use the balanced reach (Player Attack Range + Enemy Hitbox)
+            if dist <= (self.player.attack_range + enemy.hitbox_radius):
                 # Directional check: enemy must be in a forward 180-degree arc
                 # We allow a much more generous arc (-30px) to simulate a wide sword slash
                 is_in_front = (is_facing_right and dx > -30) or (not is_facing_right and dx < 30)
@@ -238,8 +239,8 @@ class GameManager:
         for enemy in self.enemies:
             ex, ey = enemy.position
             dist = ((px - ex)**2 + (py - ey)**2)**0.5
-            # Use dynamic hitbox_radius for skill range
-            if dist <= enemy.hitbox_radius * 1.5: 
+            # Use dynamic hitbox_radius + Skill Reach for skill range
+            if dist <= (self.player.attack_range * 1.5 + enemy.hitbox_radius): 
                 hit_enemies.append(enemy)
                 
         for enemy in hit_enemies:
